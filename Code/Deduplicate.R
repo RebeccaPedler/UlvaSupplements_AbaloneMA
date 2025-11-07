@@ -1,9 +1,9 @@
+install.packages(c("stringr","janitor", "tidyverse"))
+
 # Load required libraries
 library(tidyverse)
 library(janitor)
 library(stringr)
-
-install.packages(c("stringr","janitor", "janitor"))
 
 # Set working directory
 setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/SEARCHES")
@@ -50,3 +50,4 @@ Duplicates removed: 936
 > # Step 5: Write to CSV
 > write.csv(df_unique, "cleaned_references.csv", row.names = FALSE)
 >
+
