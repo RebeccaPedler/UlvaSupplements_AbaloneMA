@@ -1,12 +1,15 @@
-install.packages(c("stringr","janitor", "tidyverse"))
+install.packages(c("stringr","janitor", "tidyverse", "here"))
 
 # Load required libraries
 library(tidyverse)
 library(janitor)
 library(stringr)
+library(here)
 
-# Set working directory
-setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/SEARCHES")
+###Please download GitHub repository and then run the following
+here()
+df <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA","Searches", "primary_literature", "WOS AND SCOPUS 05062025.csv"))
+head(data)
 
 # Define the file name
 df <- read.csv("WOS and SCOPUS 11092025.csv", header = TRUE, stringsAsFactors = FALSE)
@@ -50,4 +53,5 @@ Duplicates removed: 936
 > # Step 5: Write to CSV
 > write.csv(df_unique, "cleaned_references.csv", row.names = FALSE)
 >
+
 
