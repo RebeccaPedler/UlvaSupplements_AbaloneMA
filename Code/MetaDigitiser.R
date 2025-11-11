@@ -1,11 +1,15 @@
-# Set the path to your image directory (folder containing your JPEG)
-image_dir <- "C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/Ulva benchmark papers/Falade_graphics/Mean_and_error"
+install.packages(c("MetaDigitise", "here"))
 
-library(metaDigitise)
+library(here)
+library(MetaDigitise)
+
+# Please download directory and run the following
+here()
+image_dir_Falade <- here("UlvaSupplements_AbaloneMA", "Data", "figures_for_extraction", "Falade")
 
 # Start the digitising interface
-digitised_data <- metaDigitise(image_dir, summary = TRUE)
-print(digitised_data)
+digitised_data_Falade <- metaDigitise(image_dir_Falade, summary = TRUE)
+print(digitised_data_Falade)
 
 #Image proccessing
 #S006.1_CF
@@ -162,11 +166,84 @@ f
 CI95
 y
 
-# Set the path to your image directory (folder containing your JPEG)
-image_dir <- "C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/Ulva benchmark papers/Mwangudza_graphics"
+#Image proccessing
+#S006.2_CF
+1
+s
+s
+c
+CF
+Ulva inclusion
+0
+1.6
+0
+15
+n
+n
+IMTA-U0
+IMTA-U0.75
+IMTA-U1.5
+IMTA-U3
+IMTA-U6
+IMTA-U12
+c
+a
+f
+n
+y
+
+#Image proccessing
+#S006.2_FINAL SHELL LENGTH
+c
+FSL
+Ulva inclusion
+68
+76
+0
+15
+n
+n
+IMTA-U0
+IMTA-U0.75
+IMTA-U1.5
+IMTA-U3
+IMTA-U6
+IMTA-U12
+c
+a
+f
+n
+y
+
+#Image proccessing
+#S006.2_SGR
+c
+SGR
+Ulva inclusion
+0
+0.40
+0
+15
+n
+n
+IMTA-U0
+IMTA-U0.75
+IMTA-U1.5
+IMTA-U3
+IMTA-U6
+IMTA-U12
+c
+a
+f
+n
+y
+
+# Please download directory and run the following
+here()
+image_dir_Mwu <- here("UlvaSupplements_AbaloneMA", "Data", "figures_for_extraction", "Mwangudza")
 
 # Start the digitising interface
-digitised_data_Mwu <- metaDigitise(image_dir, summary = TRUE)
+digitised_data_Mwu <- metaDigitise(image_dir_Mwu, summary = TRUE)
 print(digitised_data_Mwu)
 
 #Final length
@@ -248,88 +325,4 @@ Not biosecure Ulva 150 days
 f
 se
 n
-
-y)
-
-# Set the path to your image directory (folder containing your JPEG)
-image_dir <- "C:/Users/RebeccaPedler/OneDrive - Yumbah/Scatter plots"
-
-install.packages("metaDigitise")
-library(metaDigitise)
-
-# Start the digitising interface
-digitised_data <- metaDigitise(image_dir, summary = TRUE)
-print(digitised_data)
-
-#Image proccessing
-#S006.2_CF
-1
-s
-s
-c
-CF
-Ulva inclusion
-0
-1.6
-0
-15
-n
-n
-IMTA-U0
-IMTA-U0.75
-IMTA-U1.5
-IMTA-U3
-IMTA-U6
-IMTA-U12
-c
-a
-f
-n
 y
-
-#Image proccessing
-#S006.2_FINAL SHELL LENGTH
-c
-FSL
-Ulva inclusion
-68
-76
-0
-15
-n
-n
-IMTA-U0
-IMTA-U0.75
-IMTA-U1.5
-IMTA-U3
-IMTA-U6
-IMTA-U12
-c
-a
-f
-n
-y
-
-#Image proccessing
-#S006.2_SGR
-c
-SGR
-Ulva inclusion
-0
-0.40
-0
-15
-n
-n
-IMTA-U0
-IMTA-U0.75
-IMTA-U1.5
-IMTA-U3
-IMTA-U6
-IMTA-U12
-c
-a
-f
-n
-y
-
