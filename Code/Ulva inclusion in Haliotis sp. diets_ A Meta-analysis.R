@@ -320,3 +320,15 @@ forest(
   xlab = "Hedges g",
   main = "Feed Behaviour - Ulva meal"
 )
+
+#Feed behaviour meta-regression [dose]
+res_meta_reg_feed <- rma(yi = g_feed, vi = vi_g_feed, mods = ~ intervention_dose, data = feed_data, method = "REML")
+summary(res_meta_reg_feed)
+
+#Feed behaviour meta-regression [study duration]
+res_meta_reg_feed <- rma(yi = g_feed, vi = vi_g_feed, mods = ~ study_duration, data = feed_data, method = "REML")
+summary(res_meta_reg_feed)
+
+#Feed behaviour meta-regression [initial size]
+res_meta_reg_feed <- rma(yi = g_feed, vi = vi_g_feed, mods = ~ initial_size, data = feed_data, method = "REML")
+summary(res_meta_reg_feed)
