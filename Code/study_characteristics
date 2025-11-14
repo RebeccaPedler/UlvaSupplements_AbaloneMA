@@ -1,0 +1,237 @@
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
+
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(rnaturalearth)   # for map data
+library(rnaturalearthdata)
+library(sf)              # for spatial handling
+library(ggplot2)
+library(grid)
+library(patchwork)
+library(here)
+
+# Read the CSV file and check structure
+mydata <- read.csv("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.CSV")
+str(mydata)
+
+#Add another column to assign short citation
+citations <- data.frame(
+  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009"),
+  short_citation = c(
+    "Bansemer et al. (2016)",
+    "Lange et al. (2014)",
+    "Stone et al. (2022)",
+    "Francis et al. (2021)",
+    "Mwangudza (2024)",
+    "Falade (2023)",
+    "Bates et al. (2017)",
+    "Chi et al. (2018)",
+"Angell et al. (2012)"
+  ))
+
+#Add long outcome names
+mydata <- mydata %>%
+  mutate(
+    outcome_long = case_when(
+      outcome == "FI"  ~ "Feed intake",
+      outcome == "BG"  ~ "Biomass gain",
+      outcome == "CF"  ~ "Condition factor",
+      outcome == "FW"  ~ "Final weight",
+      outcome == "FSL" ~ "Final shell length",
+      outcome == "SG"  ~ "Shell gain",
+      outcome == "SGR" ~ "Specific growth rate",
+      outcome == "WG"  ~ "Weight gain",
+      outcome == "EER" ~ "Energy efficiency ratio",
+      outcome == "ED"  ~ "Energy deposition",
+      outcome == "FCR" ~ "Feed conversion ratio",
+      outcome == "PER" ~ "Protein efficiency ratio",
+      outcome == "PD"  ~ "Protein deposition",
+      outcome == "LG"  ~ "Length gain",
+      TRUE ~ outcome
+    )
+  )
+
+data <- dplyr::left_join(mydata, citations, by = "study_ID")
+head(data)
+
+#####Study Characteristics
+
+# Get unique study IDs
+unique_ids <- unique(mydata$study_ID)
+print(unique_ids)
+total_studies <- length(unique(data$study_ID))
+print(total_studies)
+
+# Step 1: Summarise number of records per species–outcome combination
+bubble_data <- mydata %>%
+  group_by(species, outcome_long, outcome_category) %>%
+  summarise(
+    count = n(),        # number of times each combo appears
+    .groups = "drop"
+  )
+
+# Step 2: Build the bubble plot
+bubble_plot_species <- ggplot(bubble_data, aes(x = species, y = outcome_long)) +
+  geom_point(
+    aes(size = count, fill = outcome_category),
+    shape = 21,
+    color = "black",
+    alpha = 0.9
+  ) +
+  scale_size_continuous(
+    range = c(3, 15),
+    breaks = c(2, 5, 10),
+    name = "Number of Observations"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "growth performance" = "steelblue",
+      "nutrient utilisation" = "grey70",
+      "feed behaviour" = "white"
+    )
+  ) +
+  labs(
+    title = "A",
+    x = "Species",
+    y = "Outcome",
+    size = "Number of Observations",
+    fill = "Outcome Category"
+  ) +
+  scale_x_discrete(labels = function(x) {
+    sapply(x, function(label) {
+      if (grepl(" x ", label)) {
+        parts <- strsplit(label, " ")[[1]]
+        paste0(parts[1], " ", parts[2], "\n", parts[3], "\n", parts[4], " ", parts[5])
+      } else {
+        label
+      }
+    })
+  }) +
+  guides(
+    size = guide_legend(override.aes = list(size = 8)),
+    fill = guide_legend(override.aes = list(size = 8))
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 0.5, face = "italic"),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(face = "bold", hjust = 0.05),
+    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.minor = element_blank(),
+    axis.ticks.length = unit(0.25, "cm"),
+    axis.ticks = element_line(color = "black"),
+    axis.line = element_line(color = "black"),
+    axis.ticks.outside = TRUE,
+    panel.border = element_blank(),
+    legend.position = "right"
+  ) +
+  coord_cartesian(clip = "off")
+bubble_plot_species
+
+
+# Recode country names to match rnaturalearth conventions
+mydata <- mydata %>%
+  mutate(country_standardised = case_when(
+    country == "Australia"     ~ "Australia",
+    country == "China"         ~ "China",
+    country == "Hawaii"        ~ "United States of America",  # Hawaii is part of USA
+    country == "Indonesia"     ~ "Indonesia",
+    country == "Ireland"       ~ "Ireland",
+    country == "Japan"         ~ "Japan",
+    country == "Korea"         ~ "South Korea",               # or "Republic of Korea"
+    country == "New Zealand"   ~ "New Zealand",
+    country == "South Africa"  ~ "South Africa",
+    country == "Taiwan"        ~ "Taiwan",                    # not always present in shapefile
+    TRUE                       ~ country                      # default: keep original
+  ))
+
+country_summary <- mydata %>%
+  group_by(country_standardised) %>%
+  summarise(
+    observation_count = n(),                                  # count all rows
+    percentage = 100 * observation_count / nrow(mydata),      # proportion of total rows
+    .groups = "drop"
+  ) %>%
+  rename(name = country_standardised)
+print(country_summary)
+
+# Get world map shapefile
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Join country summary with world shapefile
+world_data <- world %>%
+  left_join(country_summary, by = "name")
+
+# Step 4: Plot heat map
+world_map <- ggplot(world_data) +
+  geom_sf(aes(fill = observation_count)) +
+  scale_fill_gradient(
+    low = "#deebf7",
+    high = "#08306b",
+    na.value = "grey90",
+    name = "Number of\nObservations"   # line break in legend title
+  ) +
+  labs(
+    title = "B",
+    caption = "Grey areas = no studies"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    panel.grid = element_blank()           # remove all gridlines
+  )
+
+# Combine side by side with one shared legend
+species_and_map_combined <- bubble_plot_species + world_map +
+  plot_annotation(tag_levels = 'A') &          # & applies theme to all plots
+  theme(plot.tag = element_text(face = "bold", size = 14))
+species_and_map_combined
+
+# List validity metrics
+validity_metrics <- c(
+  "random_assignment",
+  "blind_measurement",
+  "protocol_registration",
+  "raw_data_availability",
+  "source_code_availability",
+  "funding_disclosed",
+  "funding_potential_COI",
+  "COI_disclosed"
+)
+
+# Loop through each metric and summarise
+validity_summary <- data %>%
+  select(study_ID, all_of(validity_metrics)) %>%
+  distinct() %>%
+  pivot_longer(
+    cols = all_of(validity_metrics),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  group_by(metric, value) %>%
+  summarise(
+    study_count = n(),
+    percentage = 100 * study_count / total_studies,
+    .groups = "drop"
+  ) %>%
+  arrange(metric, desc(study_count))
+
+print(validity_summary)
+
+# Summarise number and percentage of unique studies per publication year
+publication_summary <- data %>%
+  distinct(study_ID, publication_year) %>%
+  group_by(publication_year) %>%
+  summarise(unique_study_count = n()) %>%
+  mutate(
+    percentage = 100 * unique_study_count / total_studies,
+    label_percent = paste0(round(percentage, 1), "%"),
+    label_count = unique_study_count
+  )
+print(publication_summary)
+
