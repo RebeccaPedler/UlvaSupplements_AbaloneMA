@@ -1,0 +1,85 @@
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", "meta", "metafor", "clubSandwich", "robumeta"))
+
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(rnaturalearth)   # for map data
+library(rnaturalearthdata)
+library(sf)              # for spatial handling
+library(ggplot2)
+library(grid)
+library(patchwork)
+library(here)
+library(metafor)
+library(meta)
+library(clubSandwich)
+library(robumeta)
+
+# Read the CSV file and check structure
+mydata <- read.csv("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.CSV")
+str(mydata)
+
+#Add another column to assign short citation
+citations <- data.frame(
+  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009"),
+  short_citation = c(
+    "Bansemer et al. (2016)",
+    "Lange et al. (2014)",
+    "Stone et al. (2022)",
+    "Francis et al. (2021)",
+    "Mwangudza (2024)",
+    "Falade (2023)",
+    "Bates et al. (2017)",
+    "Chi et al. (2018)",
+"Angell et al. (2012)"
+  ))
+
+#Add long outcome names
+mydata <- mydata %>%
+  mutate(
+    outcome_long = case_when(
+      outcome == "FI"  ~ "Feed intake",
+      outcome == "BG"  ~ "Biomass gain",
+      outcome == "CF"  ~ "Condition factor",
+      outcome == "FW"  ~ "Final weight",
+      outcome == "FSL" ~ "Final shell length",
+      outcome == "SG"  ~ "Shell gain",
+      outcome == "SGR" ~ "Specific growth rate",
+      outcome == "WG"  ~ "Weight gain",
+      outcome == "EER" ~ "Energy efficiency ratio",
+      outcome == "ED"  ~ "Energy deposition",
+      outcome == "FCR" ~ "Feed conversion ratio",
+      outcome == "PER" ~ "Protein efficiency ratio",
+      outcome == "PD"  ~ "Protein deposition",
+      outcome == "LG"  ~ "Length gain",
+      TRUE ~ outcome
+    )
+  )
+
+#########Feed behaviour
+#Feed behaviour
+# Filter for feed behaviour
+feed_data <- data %>%
+  filter(outcome_category == "feed behaviour")
+print(feed_data)
+
+# Calculate effect size (Hedges g) and pooled SD
+feed_data <- feed_data %>%
+  mutate(
+    s_pooled_feed = sqrt(((treatment_n - 1) * treatment_SD^2 + (control_n - 1) * control_SD^2) /
+                    (treatment_n + control_n - 2)),
+    J_feed = 1 - (3 / (4 * (treatment_n + control_n) - 9)),
+    g_feed = J_feed * ((treatment_mean - control_mean) / s_pooled_feed),
+    vi_g_feed = (treatment_n + control_n) / (treatment_n * control_n) + (g_feed^2 / (2 * (treatment_n + control_n - 2)))
+  )
+
+res_3L <- rma.mv(yi = g_feed, V = vi_g_feed,
+                 random = ~ 1 | study_ID / experiment_ID,
+                 data = feed_data,
+                 method = "REML")
+
+# Extract variance components
+sigma_study <- res_3L$sigma2[1]   # between-study
+sigma_exp   <- res_3L$sigma2[2]   # within-study / experimental
+
