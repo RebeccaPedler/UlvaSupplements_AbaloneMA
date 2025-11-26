@@ -29,9 +29,9 @@ citations <- data.frame(
     "Falade (2023)",
     "Bates et al. (2017)",
     "Chi et al. (2018)",
-"Angell et al. (2012)",
-"Searle et al. (2025)",
-"Duong et al. (2021)"
+    "Angell et al. (2012)",
+    "Searle et al. (2025)",
+    "Duong et al. (2021)"
   ))
 
 #Add long outcome names
@@ -310,9 +310,7 @@ publication_summary <- data %>%
   )
 print(publication_summary)
 
-
 #########Feed behaviour
-
 #Feed behaviour
 # Filter for feed behaviour
 feed_data <- data %>%
@@ -358,6 +356,22 @@ I2_study <- sigma_study / (sigma_study + sigma_exp + mean_vi) * 100
 I2_exp   <- sigma_exp / (sigma_study + sigma_exp + mean_vi) * 100
 I2_total <- (sigma_study + sigma_exp) / (sigma_study + sigma_exp + mean_vi) * 100
 I2_study; I2_exp; I2_total
+
+#Publication bias assessment 
+feed_data <- feed_data %>%
+  mutate(
+    n_effective = (treatment_n * control_n) / (treatment_n + control_n),
+    IES_sqrt = sqrt(1 / n_effective)  # square-rooted inverse effective sample size
+  )
+res_pubbias_feed <- rma.mv(
+  yi = g_feed,
+  V  = vi_g_feed,
+  mods = ~ IES_sqrt,
+  random = ~ 1 | study_ID/experiment_ID,
+  data = feed_data,
+  method = "REML"
+)
+summary(res_pubbias_feed)
 
 #Adding intervention_dose as a moderator
 #Suspected quadratic relationship
