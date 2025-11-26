@@ -19,7 +19,7 @@ str(mydata)
 
 #Add another column to assign short citation
 citations <- data.frame(
-  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009"),
+  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009", "S010", "S011"),
   short_citation = c(
     "Bansemer et al. (2016)",
     "Lange et al. (2014)",
@@ -29,8 +29,36 @@ citations <- data.frame(
     "Falade (2023)",
     "Bates et al. (2017)",
     "Chi et al. (2018)",
-"Angell et al. (2012)"
+"Angell et al. (2012)",
+"Searle et al. (2025)",
+"Duong et al. (2021)"
   ))
+
+#Add long outcome names
+mydata <- mydata %>%
+  mutate(
+    outcome_long = case_when(
+      outcome == "FI"  ~ "Feed intake",
+      outcome == "BG"  ~ "Biomass gain",
+      outcome == "CF"  ~ "Condition factor",
+      outcome == "FW"  ~ "Final weight",
+      outcome == "FSL" ~ "Final shell length",
+      outcome == "SG"  ~ "Shell gain",
+      outcome == "SGR" ~ "Specific growth rate",
+      outcome == "WG"  ~ "Weight gain",
+      outcome == "EER" ~ "Energy efficiency ratio",
+      outcome == "ED"  ~ "Energy deposition",
+      outcome == "FCR" ~ "Feed conversion ratio",
+      outcome == "PER" ~ "Protein efficiency ratio",
+      outcome == "PD"  ~ "Protein deposition",
+      outcome == "LG"  ~ "Length gain",
+      outcome == "I" ~ "Ingested feed energy",
+      outcome == "Ab" ~ "Absorbed feed energy", 
+      outcome == "S" ~ "Shell growth energy", 
+      outcome == "Pg" ~ "Somatic growth energy",
+      TRUE ~ outcome
+    )
+  )
 
 data <- dplyr::left_join(mydata, citations, by = "study_ID")
 head(data)
@@ -311,24 +339,97 @@ forest(
   main = "Feed Behaviour - All Data"
 )
 
-# Subgroup analysis [preparation]
-res_feed_behaviour_sub_meal <- rma(yi = g_feed, vi = vi_g_feed, subset = (intervention_preparation == "meal"), data = feed_data)
-summary(res_feed_behaviour_sub_meal)
-forest(
-  res_feed_behaviour_sub_meal,
-  slab = feed_data$short_citation,
-  xlab = "Hedges g",
-  main = "Feed Behaviour - Ulva meal"
+#3 level MA
+res_3L_feed <- rma.mv(yi = g_feed, V = vi_g_feed,
+                 random = ~ 1 | study_ID / experiment_ID,
+                 data = feed_data,
+                 method = "REML")
+res_3L_feed
+
+# Extract variance components
+sigma_study <- res_3L_feed$sigma2[1]   # between-study
+sigma_exp   <- res_3L_feed$sigma2[2]   # within-study / experimental
+
+# Mean sampling variance
+mean_vi <- mean(feed_data$vi_g_feed)
+
+# Calculate I²
+I2_study <- sigma_study / (sigma_study + sigma_exp + mean_vi) * 100
+I2_exp   <- sigma_exp / (sigma_study + sigma_exp + mean_vi) * 100
+I2_total <- (sigma_study + sigma_exp) / (sigma_study + sigma_exp + mean_vi) * 100
+I2_study; I2_exp; I2_total
+
+#Adding intervention_dose as a moderator
+#Suspected quadratic relationship
+res_3L_feed_dose_quad <- rma.mv(
+  yi = g_feed,
+  V  = vi_g_feed,
+  mods = ~ intervention_dose + I(intervention_dose^2),
+  random = ~ 1 | study_ID/experiment_ID,
+  data = feed_data,
+  method = "REML"
 )
+summary(res_3L_feed_dose_quad)
 
-#Feed behaviour meta-regression [dose]
-res_meta_reg_feed <- rma(yi = g_feed, vi = vi_g_feed, mods = ~ intervention_dose, data = feed_data, method = "REML")
-summary(res_meta_reg_feed)
+# variance components from model with and without moderator
+sigma_null <- res_3L_feed$sigma2
+sigma_mod  <- res_3L_feed_dose_quad$sigma2
 
-#Feed behaviour meta-regression [study duration]
-res_meta_reg_feed <- rma(yi = g_feed, vi = vi_g_feed, mods = ~ study_duration, data = feed_data, method = "REML")
-summary(res_meta_reg_feed)
+# pseudo-R² for each level
+R2_study <- (sigma_null[1] - sigma_mod[1]) / sigma_null[1]
+R2_exp   <- (sigma_null[2] - sigma_mod[2]) / sigma_null[2]
 
-#Feed behaviour meta-regression [initial size]
-res_meta_reg_feed <- rma(yi = g_feed, vi = vi_g_feed, mods = ~ initial_size, data = feed_data, method = "REML")
-summary(res_meta_reg_feed)
+R2_study; R2_exp
+
+# Create a sequence of doses for prediction
+dose_seq <- seq(min(feed_data$intervention_dose), max(feed_data$intervention_dose), length.out = 100)
+
+# Predicted effect sizes using your quadratic model
+pred_g <- res_3L_feed_dose_quad$beta[1] +
+          res_3L_feed_dose_quad$beta[2] * dose_seq +
+          res_3L_feed_dose_quad$beta[3] * dose_seq^2
+
+# Approximate standard errors for the predictions (delta method)
+# Here we use just fixed effects; for full CI accounting for random effects you can use predict()
+pred_se <- sqrt(res_3L_feed_dose_quad$vb[1,1] +
+                dose_seq^2 * res_3L_feed_dose_quad$vb[2,2] +
+                (dose_seq^2)^2 * res_3L_feed_dose_quad$vb[3,3] +
+                2 * dose_seq * res_3L_feed_dose_quad$vb[1,2] +
+                2 * dose_seq^2 * res_3L_feed_dose_quad$vb[1,3] +
+                2 * dose_seq^3 * res_3L_feed_dose_quad$vb[2,3])
+
+# Confidence intervals
+ci_lb <- pred_g - 1.96 * pred_se
+ci_ub <- pred_g + 1.96 * pred_se
+
+# Optimum dose (from quadratic formula)
+opt_dose <- -res_3L_feed_dose_quad$beta[2] / (2 * res_3L_feed_dose_quad$beta[3])
+
+# Create prediction dataframe
+df_plot <- data.frame(dose = dose_seq, pred = pred_g, ci.lb = ci_lb, ci.ub = ci_ub)
+
+# Plot
+ggplot(df_plot, aes(x = dose, y = pred)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), fill = "steelblue", alpha = 0.2) +
+  geom_point(data = feed_data, aes(x = intervention_dose, y = g_feed),
+             color = "black", fill = "white", shape = 21, size = 3) +
+  geom_vline(xintercept = opt_dose, linetype = "dashed", color = "red", size = 1) +
+  annotate("text", x = opt_dose, y = max(pred_g)+0.2, 
+           label = paste0("Optimum ~", round(opt_dose,1), "%"), 
+           color = "red", hjust = 0.5) +
+  labs(
+    title = "Optimum Ulva Inclusion for Growth Performance",
+    x = "Ulva Inclusion (%)",
+    y = "Predicted Hedges' g (Effect Size)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),  # remove all internal gridlines
+    axis.line = element_line(color = "black", size = 0.8), # black border lines
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
