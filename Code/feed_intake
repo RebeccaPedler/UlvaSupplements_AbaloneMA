@@ -19,7 +19,7 @@ install.packages(devtools)
 devtools::install_github("itchyshin/orchard")
 
 # Read the CSV file and check structure
-mydata <- read.csv("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.CSV")
+mydata <- read.csv("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/R_datasets/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.CSV")
 str(mydata)
 
 #Add another column to assign short citation
