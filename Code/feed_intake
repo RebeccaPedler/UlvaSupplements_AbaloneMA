@@ -116,33 +116,43 @@ orchaRd::orchard_plot(res_3L_feed,
 
 I2 <- orchaRd::i2_ml(res_3L_feed)
 
-orchaRd::orchard_plot(res_3L_feed, mod="1", xlab = "g_feed",group = "study_ID") + 
-  annotate(geom="text", x= 0.7, y= 10, label= paste0("italic(I)^{2} == ", round(I2[1],4), "*\"%\""), 
-              color="black", parse = TRUE, size = 5) +
-  scale_fill_manual(values="grey") +
-  scale_colour_manual(values="grey")
+orchaRd::orchard_plot(
+    res_3L_feed,
+    mod = "1",
+    xlab = "Effect Size (Hedges g)",
+    group = "study_ID"
+) +
+  annotate(
+    geom = "text",
+    x = 0.7,
+    y = 10,
+    label = paste0("italic(I)^{2} == ", round(I2[1], 4), "*\"%\""),
+    color = "black",
+    parse = TRUE,
+    size = 5
+  ) +
+  scale_fill_manual(values = "grey") +
+  scale_colour_manual(values = "grey")
 
-#Linear
-res_3L_feed_dose <- rma.mv(
-  yi = g_feed,
-  V  = vi_g_feed,
-  mods = ~ intervention_dose,             # continuous moderator
-  random = ~ 1 | study_ID/experiment_ID, # same three-level structure
-  data = feed_data,
-  method = "REML"
-)
-summary(res_3L_feed_dose)
-
-#Quadratic
-res_3L_feed_quad <- rma.mv(
-  yi = g_feed,
-  V  = vi_g_feed,
-  mods = ~ intervention_dose + I(intervention_dose^2),
-  random = ~ 1 | study_ID/experiment_ID,
-  data = feed_data,
-  method = "REML"
-)
+#Testing impact of moderators independantly (both linear and quadratic terms)
+res_size <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ initial_size_g + I(initial_size_g^2), random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+summary(res_size)
+res_3L_feed_quad <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ intervention_dose + I(intervention_dose^2), random = ~ 1 | study_ID / experiment_ID, data = feed_data)
 summary(res_3L_feed_quad)
+res_prep <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ intervention_preparation, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+summary(res_prep)
+res_species <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ species, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+summary(res_species)
+
+res_feed_combined <- rma.mv(
+  yi = g_feed,
+  V  = vi_g_feed,
+  mods = ~ intervention_dose + I(intervention_dose^2) + intervention_preparation,
+  random = ~ 1 | study_ID / experiment_ID,
+  data = feed_data,
+  method = "REML"
+)
+summary(res_feed_combined)
 
 #Prepare prediction data
 dose_seq <- seq(min(feed_data$intervention_dose),
@@ -165,15 +175,6 @@ opt_pred <- res_3L_feed_quad$beta[1] +
             res_3L_feed_quad$beta[2]*opt_dose + 
             res_3L_feed_quad$beta[3]*opt_dose^2
 
-# I² values (from your previous calculation)
-I2_study <- 12.88
-I2_exp   <- 36.45
-I2_total <- 49.33
-
-I2_text <- paste0("I² total = ", round(I2_total,1), 
-                  "%\nI² study = ", round(I2_study,1), 
-                  "%\nI² experimental = ", round(I2_exp,1), "%")
-
 #Plot
 ggplot(df_plot, aes(x = dose, y = pred)) +
   geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), alpha = 0.2, fill = "skyblue") +
@@ -184,10 +185,8 @@ ggplot(df_plot, aes(x = dose, y = pred)) +
 annotate("text", x = opt_dose, y = max(df_plot$pred) + 1.5, 
          label = paste0("Optimum dose ≈ ", round(opt_dose,1), "%"), 
          color = "red", hjust = 0.5, vjust = 0, size = 5) +
-annotate("text", x = max(df_plot$dose), y = min(df_plot$pred) + 6.5, 
-         label = I2_text, hjust = 1, vjust = 0, size = 4.5) +
   labs(
-    title = "Quadratic Meta-Regression: Effect of Ulva Inclusion on Growth",
+    title = "",
     x = "Ulva Inclusion (%)",
     y = "Predicted Effect Size (Hedges g)"
   ) +
@@ -202,36 +201,56 @@ annotate("text", x = max(df_plot$dose), y = min(df_plot$pred) + 6.5,
     axis.title.y = element_text(margin = margin(r = 15))   # more space from y axis
   )
 
-# Subset data for Haliotis laevigata
-feed_data_HL <- feed_data %>% 
-  filter(species == "Haliotis laevigata")
+#Publication bias
+# Compute SE, precision (1/SE), and an "effective sample size"
+feed_data <- feed_data %>%
+  mutate(
+    se_g = sqrt(vi_g_feed),                    # standard error of effect size
+    precision = 1 / se_g,                     
+    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
+    inv_n_eff = 1 / n_eff                       # inverse effective sample size (not sqrt)
+  )
 
-# 3-level meta-analysis for this species only
-res_3L_feed_HL <- rma.mv(
-  yi = g_feed,
-  V  = vi_g_feed,
-  mods = ~ intervention_dose + I(intervention_dose^2),
-  random = ~ 1 | study_ID / experiment_ID,
-  data = feed_data_HL,
+# Fit three-level MLMA with precision as moderator
+res_bias_precision_feed <- rma.mv(
+  yi   = g_feed,
+  V    = vi_g_feed,
+  mods = ~ precision,                          
+  random = ~ 1 | study_ID / experiment_ID,    
+  data = feed_data,
   method = "REML"
 )
-summary(res_3L_feed_HL)
+summary(res_bias_precision_feed)
 
-# Subset data for Haliotis laevigata
-feed_data_HM <- feed_data %>% 
-  filter(species == "Haliotis midae")
-
-# 3-level meta-analysis for this species only
-res_3L_feed_HM <- rma.mv(
-  yi = g_feed,
-  V  = vi_g_feed,
-  mods = ~ intervention_dose + I(intervention_dose^2),
-  random = ~ 1 | study_ID / experiment_ID,
-  data = feed_data_HM,
-  method = "REML"
+# Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
+# This gives a more reliable p-value when clustering (few studies)
+cr2_test_precision <- coef_test(
+  res_bias_precision_feed,
+  vcov = "CR2",
+  cluster = feed_data$study_ID,
+  test = "Satterthwaite"
 )
-summary(res_3L_feed_HM)
+print(cr2_test_precision)
 
+# Create funnel plot data
+funnel_data <- feed_data %>%
+  mutate(
+    se_g = sqrt(vi_g_feed),
+    precision = 1 / se_g
+  )
 
-
-
+# Funnel plot
+ggplot(feed_data, aes(x = g_feed, y = precision)) +
+  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  # points
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +  # vertical line at 0
+  scale_y_continuous(name = "Precision (1/SE)") +
+  scale_x_continuous(name = "Effect Size (Hedges g)") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.01)
+  ) +
+  ggtitle("A) Feed Behaviour")
