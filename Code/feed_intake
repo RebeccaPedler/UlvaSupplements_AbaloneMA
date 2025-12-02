@@ -71,7 +71,7 @@ mydata <- mydata %>%
 #########Feed behaviour
 #Feed behaviour
 # Filter for feed behaviour
-feed_data <- data %>%
+feed_data <- mydata %>%
   filter(outcome_category == "feed behaviour")
 print(feed_data)
 
