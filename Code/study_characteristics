@@ -12,9 +12,10 @@ library(grid)
 library(patchwork)
 library(here)
 
-# Read the CSV file and check structure
-mydata <- read.csv("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.CSV")
-str(mydata)
+###Please download GitHub repository and then run the following
+here()
+mydata <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "Ulva inclusion in Haliotis sp. diets_A Meta-analysis - Data.csv"))
+head(mydata)
 
 #Add another column to assign short citation
 citations <- data.frame(
