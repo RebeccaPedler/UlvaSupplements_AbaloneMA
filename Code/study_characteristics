@@ -19,7 +19,7 @@ head(mydata)
 
 #Add another column to assign short citation
 citations <- data.frame(
-  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009"),
+  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009", "S010", "S011"),
   short_citation = c(
     "Bansemer et al. (2016)",
     "Lange et al. (2014)",
@@ -29,8 +29,11 @@ citations <- data.frame(
     "Falade (2023)",
     "Bates et al. (2017)",
     "Chi et al. (2018)",
-"Angell et al. (2012)"
+    "Angell et al. (2012)",
+    "Searle et al. (2025)", 
+    "Duong et al. (2021)" 
   ))
+
 
 #Add long outcome names
 mydata <- mydata %>%
