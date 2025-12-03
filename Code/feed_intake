@@ -64,6 +64,9 @@ mydata <- mydata %>%
       outcome == "PER" ~ "Protein efficiency ratio",
       outcome == "PD"  ~ "Protein deposition",
       outcome == "LG"  ~ "Length gain",
+      outcome == "I" ~ "Ingested feed energy", 
+      outcome == "Pg" ~ "Somatic feed energy", 
+      outcome == "S" ~ "Shell growth energy",
       TRUE ~ outcome
     )
   )
