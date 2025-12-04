@@ -1,12 +1,13 @@
-install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", "meta", "metafor", "clubSandwich", "robumeta", "devtools"))
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", 
+"meta", "metafor", "clubSandwich", "robumeta", "devtools", "MASS"))
 
 # Load necessary libraries
 library(dplyr)
 library(tidyr)
 library(tidyverse)
-library(rnaturalearth)   # for map data
+library(rnaturalearth)  
 library(rnaturalearthdata)
-library(sf)              # for spatial handling
+library(sf)              
 library(ggplot2)
 library(grid)
 library(patchwork)
@@ -15,6 +16,7 @@ library(metafor)
 library(meta)
 library(clubSandwich)
 library(robumeta)
+library(MASS)
 
 #install.packages("pacman")
 rm(list = ls())
@@ -72,10 +74,13 @@ mydata <- mydata %>%
   )
 
 #########Feed behaviour
+#Feed behaviour
 # Filter for feed behaviour
 feed_data <- mydata %>%
   filter(outcome_category == "feed behaviour")
+feed_data$intervention_preparation <- as.factor(feed_data$intervention_preparation)
 print(feed_data)
+
 
 # Calculate effect size (Hedges g) and pooled SD
 feed_data <- feed_data %>%
@@ -107,7 +112,17 @@ I2_total <- (sigma_study + sigma_exp) / (sigma_study + sigma_exp + mean_vi_feed)
 I2_study; I2_exp; I2_total
 
 # Orchard plot (overall effect)
-I2 <- orchaRd::i2_ml(res_3L_feed) #Defining I2 so that it can be printed on the graph
+orchaRd::orchard_plot(res_3L_feed,
+                        mod = "1",      # no moderator → "overall" model
+                        at = NULL,
+                        group = "study_ID",
+                        xlab = "g_feed",
+                        transfm = "none",  # no transformation
+                        twig.size = 0.5,    # 95% CI
+                        trunk.size = 0.1)
+
+I2 <- orchaRd::i2_ml(res_3L_feed)
+
 orchaRd::orchard_plot(
     res_3L_feed,
     mod = "1",
@@ -126,69 +141,30 @@ orchaRd::orchard_plot(
   scale_fill_manual(values = "grey") +
   scale_colour_manual(values = "grey")
 
-#Publication bias
-# Compute SE, precision (1/SE), and an "effective sample size"
-feed_data <- feed_data %>%
-  mutate(
-    se_g = sqrt(vi_g_feed),                    # standard error of effect size
-    precision = 1 / se_g,                     
-    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
-    inv_n_eff = 1 / n_eff                       # inverse effective sample size (not sqrt)
-  )
-
-# Fit three-level MLMA with precision as moderator
-res_bias_precision_feed <- rma.mv(
-  yi   = g_feed,
-  V    = vi_g_feed,
-  mods = ~ precision,                          
-  random = ~ 1 | study_ID / experiment_ID,    
-  data = feed_data,
-  method = "REML"
-)
-summary(res_bias_precision_feed)
-
-# Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
-cr2_test_precision <- coef_test(
-  res_bias_precision_feed,
-  vcov = "CR2",
-  cluster = feed_data$study_ID,
-  test = "Satterthwaite"
-)
-print(cr2_test_precision)
-
-# Create funnel plot data frame
-funnel_data <- feed_data %>%
-  mutate(
-    se_g = sqrt(vi_g_feed),
-    precision = 1 / se_g
-  )
-
-# Funnel plot
-ggplot(feed_data, aes(x = g_feed, y = precision)) +
-  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  # points
-  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +  # vertical line at 0
-  scale_y_continuous(name = "Precision (1/SE)") +
-  scale_x_continuous(name = "Effect Size (Hedges g)") +
-  theme_minimal(base_size = 14) +
-  theme(
-    panel.grid = element_blank(),
-    axis.line = element_line(color = "black", linewidth = 0.8),
-    axis.ticks.length = unit(0.3, "cm"),
-    axis.ticks = element_line(color = "black"),
-    plot.title = element_text(face = "bold", hjust = 0.01)
-  ) +
-  ggtitle("A) Feed Behaviour")
-
-#Testing impact of moderators independantly (both linear and quadratic terms for continious data)
-res_size <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ initial_size_g + I(initial_size_g^2), random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+#Testing impact of moderators in univariate models (both linear and quadratic terms)
+res_size <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ initial_size_g, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
 summary(res_size)
-res_3L_feed_quad <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ intervention_dose + I(intervention_dose^2), random = ~ 1 | study_ID / experiment_ID, data = feed_data)
-summary(res_3L_feed_quad)
-res_prep <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ intervention_preparation, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
-summary(res_prep)
 res_species <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ species, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
 summary(res_species)
+res_duration <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ study_duration_days, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+summary(res_duration)
 
+#Univariate MLMR with Ulva dose as moderator and calculation for proportion of heterogeneity explained 
+res_3L_feed_quad <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ intervention_dose + I(intervention_dose^2), random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+summary(res_3L_feed_quad)
+tau2_res_3L_feed <- res_3L_feed$sigma2[2]      # residual variance without moderators
+tau2_res_3L_feed_quad <- res_3L_feed_quad$sigma2[2]  # residual variance with dose
+R2_dose_quad <- (tau2_res_3L_feed - tau2_res_3L_feed_quad) / tau2_res_3L_feed * 100
+print(R2_dose_quad)
+
+#Univariate MLMR with Ulva preparation as moderator and calculation for proportion of heterogeneity explained 
+res_prep <- rma.mv(yi = g_feed, V = vi_g_feed, mods = ~ intervention_preparation, random = ~ 1 | study_ID / experiment_ID, data = feed_data)
+summary(res_prep)
+tau2_res_prep <- res_prep$sigma2[2]  # residual variance with dose
+R2 <- (tau2_res_3L_feed - tau2_res_prep) / tau2_res_3L_feed * 100
+print(R2)
+
+#Final model including intervention_dose and intervention_preparation as moderators
 res_feed_combined <- rma.mv(
   yi = g_feed,
   V  = vi_g_feed,
@@ -198,6 +174,31 @@ res_feed_combined <- rma.mv(
   method = "REML"
 )
 summary(res_feed_combined)
+
+##Calculations to determine the amount of heterogeneity explained by the model res_feed_combined
+# Extract variance components
+vc_res_3L_feed <- as.numeric(res_3L_feed$sigma2)
+vc_res_feed_combined  <- as.numeric(res_feed_combined$sigma2)
+
+# Remaining heterogeneity after including moderators
+remaining <- vc_res_feed_combined
+
+# Absolute reduction in heterogeneity
+reduction <- vc_res_3L_feed - vc_res_feed_combined
+
+# Proportion of heterogeneity explained (pseudo-R2)
+prop_explained <- (vc_res_3L_feed - vc_res_feed_combined) / vc_res_3L_feed
+
+# Create a readable table
+heterogeneity_table <- data.frame(
+  Level = c("Between studies (sigma^2_1)", "Within studies / experiments (sigma^2_2)"),
+  Null_Model = vc_res_3L_feed,
+  Moderator_Model = vc_res_feed_combined,
+  Remaining = remaining,
+  Reduction = reduction,
+  Proportion_Explained = prop_explained
+)
+heterogeneity_table
 
 #Calculating optimum Ulva dose for feed_behaviour using the res_feed_combined model
 # Extract coefficients
@@ -255,3 +256,97 @@ pred_sims <- full_coefs[,1] + full_coefs[,2]*opt_sims + full_coefs[,3]*opt_sims^
 quantile(pred_sims, probs = c(0.025,0.975))
 
 
+#Prepare prediction data
+dose_seq <- seq(min(feed_data$intervention_dose),
+                max(feed_data$intervention_dose),
+                length.out = 100)
+
+# Predict from quadratic meta-regression
+pred <- predict(res_3L_feed_quad, newmods = cbind(dose_seq, dose_seq^2))
+
+df_plot <- data.frame(
+  dose = dose_seq,
+  pred = pred$pred,
+  ci.lb = pred$ci.lb,
+  ci.ub = pred$ci.ub
+)
+
+#Plot
+ggplot(df_plot, aes(x = dose, y = pred)) +
+  geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), alpha = 0.2, fill = "skyblue") +
+  geom_line(color = "blue", linewidth = 1) +
+  geom_point(data = feed_data, aes(x = intervention_dose, y = g_feed),
+             color = "black", fill = "white", shape = 21, size = 3) +
+  geom_vline(xintercept = opt_dose, linetype = "dashed", color = "red") +
+annotate("text", x = opt_dose, y = max(df_plot$pred) + 1.5, 
+         label = paste0("Optimum dose ≈ ", round(opt_dose,1), "%"), 
+         color = "red", hjust = 0.5, vjust = 0, size = 5) +
+  labs(
+    title = "",
+    x = "Ulva Dose (%)",
+    y = "Predicted Effect Size (Hedges g)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),                        # remove internal gridlines
+    axis.line = element_line(color = "black", linewidth = 0.8), # black axis
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.title.x = element_text(margin = margin(t = 15)),  # more space from x axis
+    axis.title.y = element_text(margin = margin(r = 15))   # more space from y axis
+  )
+
+#Publication bias
+# Compute SE, precision (1/SE), and an "effective sample size"
+feed_data <- feed_data %>%
+  mutate(
+    se_g = sqrt(vi_g_feed),                    # standard error of effect size
+    precision = 1 / se_g,                     
+    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
+    inv_n_eff = 1 / n_eff                       # inverse effective sample size (not sqrt)
+  )
+
+# Fit three-level MLMA with precision as moderator
+res_bias_precision_feed <- rma.mv(
+  yi   = g_feed,
+  V    = vi_g_feed,
+  mods = ~ precision,                          
+  random = ~ 1 | study_ID / experiment_ID,    
+  data = feed_data,
+  method = "REML"
+)
+summary(res_bias_precision_feed)
+
+# Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
+# This gives a more reliable p-value when clustering (few studies)
+cr2_test_precision <- coef_test(
+  res_bias_precision_feed,
+  vcov = "CR2",
+  cluster = feed_data$study_ID,
+  test = "Satterthwaite"
+)
+print(cr2_test_precision)
+
+# Create funnel plot data
+funnel_data <- feed_data %>%
+  mutate(
+    se_g = sqrt(vi_g_feed),
+    precision = 1 / se_g
+  )
+
+# Funnel plot
+ggplot(feed_data, aes(x = g_feed, y = precision)) +
+  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  # points
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +  # vertical line at 0
+  scale_y_continuous(name = "Precision (1/SE)") +
+  scale_x_continuous(name = "Effect Size (Hedges g)") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.01)
+  ) +
+  ggtitle("A) Feed Behaviour")
