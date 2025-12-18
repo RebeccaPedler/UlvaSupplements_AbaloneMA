@@ -261,3 +261,18 @@ species_summary <- mydata %>%
     .groups = "drop"
   )
 species_summary
+
+# Number of experiments per study
+study_experiment_summary <- mydata %>%
+  group_by(study_ID) %>%
+  summarise(
+    n_experiments = n_distinct(experiment_ID),
+    .groups = "drop"
+  ) %>%
+  summarise(
+    min_experiments    = min(n_experiments),
+    max_experiments    = max(n_experiments),
+    mean_experiments   = mean(n_experiments),
+    median_experiments = median(n_experiments)
+  )
+study_experiment_summary
