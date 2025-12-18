@@ -242,3 +242,22 @@ publication_summary <- data %>%
   )
 print(publication_summary)
 
+#Summarise study design characteristics
+vars_characteristics <- c("study_duration_days", "initial_size_g", "water_temperature")
+summary_stats_characteristics <- data.frame(
+  variable = vars_characteristics,
+  median = sapply(mydata[vars_characteristics], median, na.rm = TRUE),
+  min = sapply(mydata[vars_characteristics], min, na.rm = TRUE),
+  max = sapply(mydata[vars_characteristics], max, na.rm = TRUE)
+)
+summary_stats_characteristics
+
+#species summary
+species_summary <- mydata %>%
+  group_by(species) %>%
+  summarise(
+    n_experiments = n_distinct(experiment_ID),
+    n_studies     = n_distinct(study_ID),
+    .groups = "drop"
+  )
+species_summary
