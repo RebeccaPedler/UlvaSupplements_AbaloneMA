@@ -80,6 +80,10 @@ growth_data <- mydata %>%
 growth_data$intervention_preparation <- as.factor(growth_data$intervention_preparation)
 print(growth_data)
 
+#Summarise k and unique study_ID
+growth_data %>%
+  summarise(n_studies = n_distinct(study_ID), n_effects = n_distinct(experiment_ID))
+
 # Calculate effect size (Hedges g) and pooled SD
 growth_data <- growth_data %>%
   mutate(
@@ -91,40 +95,36 @@ growth_data <- growth_data %>%
                   (g_growth^2 / (2 * (treatment_n + control_n - 2)))
   )
 
-res_3L_growth <- rma.mv(
+res_3L_growth_wspecies <- rma.mv(
   yi = g_growth, V = vi_g_growth,
-  random = ~ 1 | study_ID / experiment_ID,
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID 
+  ),
   data = growth_data,
   method = "REML"
 )
-
-summary(res_3L_growth)
+summary(res_3L_growth_wspecies)
 
 # Extract variance components
-sigma_study <- res_3L_growth$sigma2[1]      # between-study
-sigma_exp   <- res_3L_growth$sigma2[2]      # within-study / experimental
+sigma_species_growth <- res_3L_growth_wspecies$sigma2[1]
+sigma_study_growth <- res_3L_growth_wspecies$sigma2[2]
+sigma_exp_growth <- res_3L_growth_wspecies$sigma2[3]
 
 # Mean sampling variance
 mean_vi_growth <- mean(growth_data$vi_g_growth)
 
-# Calculate I²
-I2_study <- sigma_study / (sigma_study + sigma_exp + mean_vi_growth) * 100
-I2_exp   <- sigma_exp / (sigma_study + sigma_exp + mean_vi_growth) * 100
-I2_total <- (sigma_study + sigma_exp) / (sigma_study + sigma_exp + mean_vi_growth) * 100
+# Total variance
+total_var_growth <- sigma_species_growth + sigma_study_growth + sigma_exp_growth + mean_vi_growth
 
-I2_study; I2_exp; I2_total
+# I² calculations
+I2_species_growth <- sigma_species_growth / total_var_growth * 100
+I2_study_growth <- sigma_study_growth / total_var_growth * 100
+I2_exp_growth <- sigma_exp_growth / total_var_growth * 100
+I2_total_growth <- (sigma_species_growth + sigma_study_growth + sigma_exp_growth) / total_var_growth * 100
 
-# Orchard plot (overall effect)
-orchaRd::orchard_plot(
-  res_3L_growth,
-  mod = "1",
-  at = NULL,
-  group = "study_ID",
-  xlab = "g_growth",
-  transfm = "none",
-  twig.size = 0.5,
-  trunk.size = 0.1
-)
+I2_species_growth; I2_study_growth; I2_exp_growth; I2_total_growth
+
 
 I2 <- orchaRd::i2_ml(res_3L_growth)
 
@@ -146,74 +146,73 @@ orchaRd::orchard_plot(
   scale_fill_manual(values = "grey") +
   scale_colour_manual(values = "grey")
 
-# Testing impact of moderators (univariate)
-res_size <- rma.mv(
-  yi = g_growth, V = vi_g_growth,
-  mods = ~ initial_size_g,
-  random = ~ 1 | study_ID / experiment_ID,
-  data = growth_data
-)
+#Testing impact of moderators in univariate models
+res_size <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ initial_size_g, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
 summary(res_size)
 
-res_species <- rma.mv(
-  yi = g_growth, V = vi_g_growth,
-  mods = ~ species,
-  random = ~ 1 | study_ID / experiment_ID,
-  data = growth_data
-)
-summary(res_species)
+#growth performance outcome
+res_outcome <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ outcome, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_outcome)
 
-res_duration <- rma.mv(
-  yi = g_growth, V = vi_g_growth,
-  mods = ~ study_duration_days,
-  random = ~ 1 | study_ID / experiment_ID,
-  data = growth_data
-)
-summary(res_duration)
+#study duration
+res_study_duration <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ study_duration_days, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_study_duration)
 
-# Univariate MLMR: dose (linear + quadratic)
-res_3L_growth_quad <- rma.mv(
-  yi = g_growth, V = vi_g_growth,
-  mods = ~ intervention_dose + I(intervention_dose^2),
-  random = ~ 1 | study_ID / experiment_ID,
-  data = growth_data
-)
-summary(res_3L_growth_quad)
+#Ulva preparation
+res_intervention_preparation <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ intervention_preparation, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_intervention_preparation)
 
-# Univariate MLMR: preparation
-res_prep <- rma.mv(
-  yi = g_growth, V = vi_g_growth,
-  mods = ~ intervention_preparation,
-  random = ~ 1 | study_ID / experiment_ID,
-  data = growth_data
-)
-summary(res_prep)
+#intervention dose
+res_intervention_dose <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ intervention_dose, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_intervention_dose)
 
-# Final combined model
-res_growth_combined <- rma.mv(
-  yi = g_growth,
-  V  = vi_g_growth,
-  mods = ~ intervention_dose + I(intervention_dose^2) + initial_size_g + species,
-  random = ~ 1 | study_ID / experiment_ID,
-  data = growth_data,
-  method = "REML"
-)
-summary(res_growth_combined)
+#intervention dose (quadratic)
+res_intervention_dose_quad <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ intervention_dose + I(intervention_dose^2), random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_intervention_dose_quad)
 
-# Heterogeneity explained by the combined model
-vc_res_3L_growth <- as.numeric(res_3L_growth$sigma2)
-vc_res_growth_combined <- as.numeric(res_growth_combined$sigma2)
+#Final multivariate model
+res_intervention_multi <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ intervention_dose + initial_size_g + study_duration_days, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_intervention_multi)
 
-remaining <- vc_res_growth_combined
-reduction <- vc_res_3L_growth - vc_res_growth_combined
-prop_explained <- (vc_res_3L_growth - vc_res_growth_combined) / vc_res_3L_growth
+# Extract variance components
+vc_null  <- as.numeric(res_3L_growth_wspecies$sigma2)
+vc_mod   <- as.numeric(res_growth_multi$sigma2)
 
+# Sanity check
+stopifnot(length(vc_null) == 3, length(vc_mod) == 3)
+
+# Calculate reduction and proportion explained
+reduction <- vc_null - vc_mod
+prop_explained <- reduction / vc_null
+
+# Build table
 heterogeneity_table <- data.frame(
-  Level = c("Between studies (sigma^2_1)",
-            "Within studies / experiments (sigma^2_2)"),
-  Null_Model = vc_res_3L_growth,
-  Moderator_Model = vc_res_growth_combined,
-  Remaining = remaining,
+  Level = c("Between species (sigma^2_1)",
+            "Between studies (sigma^2_2)",
+            "Within studies / experiments (sigma^2_3)"),
+  Null_Model = vc_null,
+  Moderator_Model = vc_mod,
   Reduction = reduction,
   Proportion_Explained = prop_explained
 )
