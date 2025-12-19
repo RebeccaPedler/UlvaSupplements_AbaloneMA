@@ -24,9 +24,8 @@ devtools::install_github("daniel1noble/orchaRd", ref = "main", force = TRUE)
 pacman::p_load(devtools, tidyverse, metafor, patchwork, R.rsp, orchaRd, emmeans, ape, phytools, flextable)
 
 ###Please download GitHub repository and then run the following
-getwd()
-setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/R_datasets")
-mydata <- read_csv("ulva_meta_analysis_data.csv")
+here()
+mydata <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "Ulva inclusion in Haliotis sp. diets_A Meta-analysis - Data"))
 head(mydata)
 
 #Add another column to assign short citation
@@ -73,3 +72,123 @@ mydata <- mydata %>%
       TRUE ~ outcome
     )
   )
+
+# Calculate effect size (Hedges g) and pooled SD
+all_data <- mydata %>%
+  mutate(
+    s_pooled = sqrt(((treatment_n - 1) * treatment_SD^2 + (control_n - 1) * control_SD^2) /
+                    (treatment_n + control_n - 2)),
+    J_all = 1 - (3 / (4 * (treatment_n + control_n) - 9)),
+    g_all = J_all * ((treatment_mean - control_mean) / s_pooled),
+    vi_g_all = (treatment_n + control_n) / (treatment_n * control_n) + (g_all^2 / (2 * (treatment_n + control_n - 2)))
+  )
+
+#Reverse the sign of FCR
+all_data <- all_data %>%
+  mutate(
+    # Reverse sign of effect size for FCR outcomes
+    g_all = ifelse(outcome == "FCR", -g_all, g_all)
+  )
+
+#Run MLMA using all data.
+res_3L_all <- rma.mv(yi = g_all, V = vi_g_all,
+                 random = ~ 1 | study_ID / experiment_ID,
+                 data = all_data,
+                 method = "REML")
+res_3L_all
+
+# Extract variance components
+sigma_study <- res_3L_all$sigma2[1]   # between-study
+sigma_exp   <- res_3L_all$sigma2[2]   # within-study / experimental
+
+# Mean sampling variance
+mean_vi_all <- mean(all_data$vi_g_all)
+
+# Calculate I²
+I2_study <- sigma_study / (sigma_study + sigma_exp + mean_vi_all) * 100
+I2_exp   <- sigma_exp / (sigma_study + sigma_exp + mean_vi_all) * 100
+I2_total <- (sigma_study + sigma_exp) / (sigma_study + sigma_exp + mean_vi_all) * 100
+
+I2_study; I2_exp; I2_total
+
+#Plot orchard plot
+orchaRd::orchard_plot(
+    res_3L_all,
+    mod = "1",
+    xlab = "Effect Size (Hedges g)",
+    group = "study_ID"
+) +
+  annotate(
+    geom = "text",
+    x = 0.7,
+    y = 10,
+    label = paste0("italic(I)^{2} == ", round(I2_total[1], 2), "*\"%\""),
+    color = "black",
+    parse = TRUE,
+    size = 5
+  ) +
+  scale_fill_manual(values = "grey") +
+  scale_colour_manual(values = "grey")
+
+#Publication bias
+# Compute SE, precision, and effective sample size for all_data
+all_data <- all_data %>%
+  mutate(
+    se_g = sqrt(vi_g_all),                    # standard error of effect size
+    precision = 1 / se_g,                     
+    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
+    inv_n_eff = 1 / n_eff                       # inverse effective sample size (not sqrt)
+  )
+
+# Fit three-level MLMA with precision as moderator
+res_bias_precision_all <- rma.mv(
+  yi   = g_all,
+  V    = vi_g_all,
+  mods = ~ precision,                           # moderator for publication bias
+  random = ~ 1 | study_ID / experiment_ID,     # 3-level structure
+  data = all_data,
+  method = "REML"
+)
+summary(res_bias_precision_all)
+
+# Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
+cr2_test_precision <- coef_test(
+  res_bias_precision_all,
+  vcov = "CR2",
+  cluster = all_data$study_ID,
+  test = "Satterthwaite"
+)
+print(cr2_test_precision)
+
+# Create funnel plot
+ggplot(all_data, aes(x = g_all, y = precision)) +
+  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +  
+  scale_y_continuous(name = "Precision (1/SE)") +
+  scale_x_continuous(name = "Effect Size (Hedges g)") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.01)
+  ) +
+  ggtitle("")
+
+
+#Run MLMR with outcome_category as a moderator
+# Set growth performance as reference category (highest number of effect sizes)
+all_data$outcome_category <- factor(all_data$outcome_category)  # convert to factor
+all_data$outcome_category <- relevel(all_data$outcome_category, ref = "growth performance")
+
+res_meta_reg <- rma.mv(yi = g_all, V  = vi_g_all,
+  mods = ~ outcome_category,        
+  random = ~ 1 | study_ID / experiment_ID, 
+  data = all_data,
+  method = "REML"
+)
+res_meta_reg
+
+
+
