@@ -83,12 +83,9 @@ all_data <- mydata %>%
     vi_g_all = (treatment_n + control_n) / (treatment_n * control_n) + (g_all^2 / (2 * (treatment_n + control_n - 2)))
   )
 
-#Reverse the sign of FCR
+#Reverse the sign of FCR effect size
 all_data <- all_data %>%
-  mutate(
-    # Reverse sign of effect size for FCR outcomes
-    g_all = ifelse(outcome == "FCR", -g_all, g_all)
-  )
+  mutate(g_all = ifelse(outcome == "FCR", -g_all, g_all))
 
 #Run MLMA using all data.
 res_3L_all <- rma.mv(yi = g_all, V = vi_g_all,
@@ -97,23 +94,59 @@ res_3L_all <- rma.mv(yi = g_all, V = vi_g_all,
                  method = "REML")
 res_3L_all
 
+#Testing effect of species
+# Set species as a factor and H. laevigata as the reference (highest k)
+all_data$species <- factor(all_data$species)
+all_data$species <- relevel(all_data$species, ref = "Haliotis laevigata")
+
+# MLMA with species as fixed effect
+res_species_fixed <- rma.mv(
+  yi   = g_all,
+  V    = vi_g_all,
+  mods = ~ species,                    
+  random = ~ 1 | study_ID / experiment_ID,  
+  data = all_data,
+  method = "REML"
+)
+summary(res_species_fixed)
+
+# MLMA with species as random effect
+res_species_random <- rma.mv(
+yi   = g_all,
+V    = vi_g_all,
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID 
+  ),
+  data = all_data,
+  method = "REML"
+)
+summary(res_species_random)
+# Compare models
+anova(res_3L_all, res_species_random)
+
 # Extract variance components
-sigma_study <- res_3L_all$sigma2[1]   # between-study
-sigma_exp   <- res_3L_all$sigma2[2]   # within-study / experimental
+sigma_species_all <- res_species_random$sigma2[1]
+sigma_study_all   <- res_species_random$sigma2[2]
+sigma_exp_all    <- res_species_random$sigma2[3]
 
 # Mean sampling variance
 mean_vi_all <- mean(all_data$vi_g_all)
 
-# Calculate I²
-I2_study <- sigma_study / (sigma_study + sigma_exp + mean_vi_all) * 100
-I2_exp   <- sigma_exp / (sigma_study + sigma_exp + mean_vi_all) * 100
-I2_total <- (sigma_study + sigma_exp) / (sigma_study + sigma_exp + mean_vi_all) * 100
+# Total variance
+total_var_all <- sigma_species_all + sigma_study_all + sigma_exp_all + mean_vi_all
 
-I2_study; I2_exp; I2_total
+# I² calculations
+I2_species_all <- sigma_species_all / total_var_all * 100
+I2_study_all   <- sigma_study_all   / total_var_all * 100
+I2_exp_all    <- sigma_exp_all     / total_var_all * 100
+I2_total_all   <- (sigma_species_all + sigma_study_all + sigma_exp_all) / total_var_all * 100
+
+I2_species_all; I2_study_all; I2_exp_all; I2_total_all
 
 #Plot orchard plot
 orchaRd::orchard_plot(
-    res_3L_all,
+    res_species_random,
     mod = "1",
     xlab = "Effect Size (Hedges g)",
     group = "study_ID"
@@ -144,11 +177,13 @@ all_data <- all_data %>%
 res_bias_precision_all <- rma.mv(
   yi   = g_all,
   V    = vi_g_all,
-  mods = ~ precision,                           # moderator for publication bias
-  random = ~ 1 | study_ID / experiment_ID,     # 3-level structure
+  mods = ~ precision,                       
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID 
+  ), 
   data = all_data,
-  method = "REML"
-)
+  method = "REML")
 summary(res_bias_precision_all)
 
 # Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
@@ -176,7 +211,6 @@ ggplot(all_data, aes(x = g_all, y = precision)) +
   ) +
   ggtitle("")
 
-
 #Run MLMR with outcome_category as a moderator
 # Set growth performance as reference category (highest number of effect sizes)
 all_data$outcome_category <- factor(all_data$outcome_category)  # convert to factor
@@ -184,11 +218,11 @@ all_data$outcome_category <- relevel(all_data$outcome_category, ref = "growth pe
 
 res_meta_reg <- rma.mv(yi = g_all, V  = vi_g_all,
   mods = ~ outcome_category,        
-  random = ~ 1 | study_ID / experiment_ID, 
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID 
+  ),
   data = all_data,
   method = "REML"
 )
 res_meta_reg
-
-
-
