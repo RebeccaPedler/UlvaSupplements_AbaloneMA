@@ -81,7 +81,6 @@ feed_data <- mydata %>%
 feed_data$intervention_preparation <- as.factor(feed_data$intervention_preparation)
 print(feed_data)
 
-
 # Calculate effect size (Hedges g) and pooled SD
 feed_data <- feed_data %>%
   mutate(
@@ -92,6 +91,17 @@ feed_data <- feed_data %>%
     vi_g_feed = (treatment_n + control_n) / (treatment_n * control_n) + (g_feed^2 / (2 * (treatment_n + control_n - 2)))
   )
 
+#Run MLMA with species as additional random effect
+res_3L_feed_species <- rma.mv(yi = g_feed, V = vi_g_feed,
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID 
+  ),
+data = feed_data,
+method = "REML")
+res_3L_feed_species
+
+#Species explains very little heterogeneity - remove as random effect
 res_3L_feed <- rma.mv(yi = g_feed, V = vi_g_feed,
                  random = ~ 1 | study_ID / experiment_ID,
                  data = feed_data,
