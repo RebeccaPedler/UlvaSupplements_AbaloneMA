@@ -125,27 +125,6 @@ I2_total_growth <- (sigma_species_growth + sigma_study_growth + sigma_exp_growth
 
 I2_species_growth; I2_study_growth; I2_exp_growth; I2_total_growth
 
-
-I2 <- orchaRd::i2_ml(res_3L_growth)
-
-orchaRd::orchard_plot(
-  res_3L_growth,
-  mod = "1",
-  xlab = "Effect Size (Hedges g)",
-  group = "study_ID"
-) +
-  annotate(
-    geom = "text",
-    x = 0.7,
-    y = 10,
-    label = paste0("italic(I)^{2} == ", round(I2[1], 4), "*\"%\""),
-    color = "black",
-    parse = TRUE,
-    size = 5
-  ) +
-  scale_fill_manual(values = "grey") +
-  scale_colour_manual(values = "grey")
-
 #Testing impact of moderators in univariate models
 res_size <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ initial_size_g, random = list(
     ~ 1 | species,                  
@@ -188,12 +167,19 @@ res_intervention_dose_quad <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ in
 data = growth_data)
 summary(res_intervention_dose_quad)
 
-#Final multivariate model
-res_intervention_multi <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ intervention_dose + initial_size_g + study_duration_days, random = list(
+#Final multivariate model 1
+res_growth_multi_1 <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ intervention_dose + initial_size_g + study_duration_days, random = list(
     ~ 1 | species,                  
     ~ 1 | study_ID / experiment_ID), 
 data = growth_data)
-summary(res_intervention_multi)
+summary(res_growth_multi_1)
+
+#Final multivariate model final
+res_growth_multi <- rma.mv(yi = g_growth, V = vi_g_growth, mods = ~ initial_size_g + intervention_dose, random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID), 
+data = growth_data)
+summary(res_growth_multi)
 
 # Extract variance components
 vc_null  <- as.numeric(res_3L_growth_wspecies$sigma2)
@@ -219,8 +205,8 @@ heterogeneity_table <- data.frame(
 
 heterogeneity_table
 
-##Publication bias
-# Compute SE, precision (1/SE), and an "effective sample size"
+#Publication bias
+# Compute SE, precision, and effective sample size for all_data
 growth_data <- growth_data %>%
   mutate(
     se_g = sqrt(vi_g_growth),                    # standard error of effect size
@@ -233,34 +219,28 @@ growth_data <- growth_data %>%
 res_bias_precision_growth <- rma.mv(
   yi   = g_growth,
   V    = vi_g_growth,
-  mods = ~ precision,                          
-  random = ~ 1 | study_ID / experiment_ID,    
+  mods = ~ precision,                       
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / experiment_ID 
+  ), 
   data = growth_data,
-  method = "REML"
-)
+  method = "REML")
 summary(res_bias_precision_growth)
 
 # Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
-# This gives a more reliable p-value when clustering (few studies)
-cr2_test_precision_growth <- coef_test(
+cr2_test_precision <- coef_test(
   res_bias_precision_growth,
   vcov = "CR2",
-  cluster = growth_data$study_ID,
+  cluster = growth_data$species,    #experiment and study nested within species
   test = "Satterthwaite"
 )
-print(cr2_test_precision_growth)
+print(cr2_test_precision)
 
-# Create funnel plot data
-funnel_data_growth <- growth_data %>%
-  mutate(
-    se_g = sqrt(vi_g_growth),
-    precision = 1 / se_g
-  )
-
-# Funnel plot
+# Create funnel plot
 ggplot(growth_data, aes(x = g_growth, y = precision)) +
-  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +
+  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +  
   scale_y_continuous(name = "Precision (1/SE)") +
   scale_x_continuous(name = "Effect Size (Hedges g)") +
   theme_minimal(base_size = 14) +
@@ -271,4 +251,4 @@ ggplot(growth_data, aes(x = g_growth, y = precision)) +
     axis.ticks = element_line(color = "black"),
     plot.title = element_text(face = "bold", hjust = 0.01)
   ) +
-  ggtitle("B) Growth")
+  ggtitle("Growth Performance")
