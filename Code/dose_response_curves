@@ -1,0 +1,107 @@
+# Optimum dose
+opt_dose <- -beta1 / (2 * beta2)
+opt_dose
+
+# Variance-covariance for linear and quadratic dose
+vc <- vcov(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)"),
+                               c("intervention_dose","I(intervention_dose^2)")]
+
+# Delta method
+d_b1 <- -1 / (2 * beta2)
+d_b2 <- beta1 / (2 * beta2^2)
+
+var_opt <- d_b1^2 * vc["intervention_dose","intervention_dose"] +
+           d_b2^2 * vc["I(intervention_dose^2)","I(intervention_dose^2)"] +
+           2 * d_b1 * d_b2 * vc["intervention_dose","I(intervention_dose^2)"]
+
+se_opt <- sqrt(var_opt)
+
+ci_opt <- c(
+  optimum_dose_percent = opt_dose,
+  CI_lower = opt_dose - 1.96 * se_opt,
+  CI_upper = opt_dose + 1.96 * se_opt
+)
+ci_opt
+
+coefs <- coef(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)")]
+vc <- vcov(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)"),
+                               c("intervention_dose","I(intervention_dose^2)")]
+n_sims <- 10000
+sim_coefs <- mvrnorm(n_sims, mu = coefs, Sigma = vc)
+opt_sims <- -sim_coefs[,1] / (2 * sim_coefs[,2])
+
+pred_opt <- beta0 + beta1*opt_dose + beta2*opt_dose^2
+pred_opt
+
+beta0_sim <- coef(res_feed_combined)["intrcpt"]
+beta_prep_sim <- coef(res_dose_quadratic)["intervention_preparationmeal"]
+
+# Combine into simulation
+full_coefs <- cbind(
+  beta0 = beta0_sim <- rnorm(n_sims, mean=beta0, sd=sqrt(vcov(res_dose_quadratic)["intrcpt","intrcpt"])),
+  beta1 = sim_coefs[,1],
+  beta2 = sim_coefs[,2])
+pred_sims <- full_coefs[,1] + full_coefs[,2]*opt_sims + full_coefs[,3]*opt_sims^2
+quantile(pred_sims, probs = c(0.025,0.975))
+
+#Prepare prediction data
+dose_seq <- seq(min(feed_data$intervention_dose),
+                max(feed_data$intervention_dose),
+                length.out = 100)
+
+# Predict from quadratic meta-regression
+pred <- predict(res_dose_quadratic, newmods = cbind(dose_seq, dose_seq^2))
+
+df_plot <- data.frame(
+  dose = dose_seq,
+  pred = pred$pred,
+  ci.lb = pred$ci.lb,
+  ci.ub = pred$ci.ub
+)
+
+#Plot
+optimum_feed <- ggplot(df_plot, aes(x = dose, y = pred)) +
+  geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), alpha = 0.2, fill = "darkgrey") +
+  geom_line(color = "black", linewidth = 1) +
+  geom_point(data = feed_data, aes(x = intervention_dose, y = g_feed),
+             color = "black", fill = "grey", shape = 21, size = 3) +
+  geom_vline(xintercept = opt_dose, linetype = "dashed", color = "black") +
+annotate("text", x = opt_dose, y = max(df_plot$pred) + 1.5, 
+         label = paste0("Optimum dose ≈ ", round(opt_dose,1), "%"), 
+         color = "black", hjust = 0.5, vjust = 0, size = 5) +
+  labs(
+    title = "A)",
+    x = "Ulva Dose (%)",
+    y = "Effect Size (Hedges g)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),                        
+    axis.line = element_line(color = "black", linewidth = 0.8), # black axis
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.05),
+    axis.title.x = element_text(margin = margin(t = 15)), 
+    axis.title.y = element_text(margin = margin(r = 15))  
+  )
+
+optimum_growth <- ggplot(growth_data, aes(x = intervention_dose, y = g_growth)) +
+  geom_point(shape = 21, color = "black", fill = "grey", size = 3) +
+  geom_smooth(method = "lm", formula = y ~ x, color = "black", se = TRUE, linetype = "solid", linewidth = 0.8) +
+  labs(
+    x = "Ulva Dose (%)",
+    y = "Effect Size (Hedges g)",
+    title = "B)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    panel.grid = element_blank(),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.05),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10))
+  )
+
+(optimum_feed | optimum_growth)
