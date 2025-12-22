@@ -226,3 +226,26 @@ res_meta_reg <- rma.mv(yi = g_all, V  = vi_g_all,
   method = "REML"
 )
 res_meta_reg
+
+# Extract variance components
+sigma_species_all_outcome <- res_meta_reg$sigma2[1]
+sigma_study_all_outcome   <- res_meta_reg$sigma2[2]
+sigma_exp_all_outcome    <- res_meta_reg$sigma2[3]
+
+# Mean sampling variance
+mean_vi_all <- mean(all_data$vi_g_all)
+
+# Total variance
+total_var_all_outcome <- sigma_species_all_outcome + sigma_study_all_outcome + sigma_exp_all_outcome + mean_vi_all
+
+# I² calculations
+I2_species_all_outcome <- sigma_species_all_outcome / total_var_all_outcome * 100
+I2_study_all_outcome   <- sigma_study_all_outcome   / total_var_all_outcome * 100
+I2_exp_all_outcome    <- sigma_exp_all_outcome     / total_var_all_outcome * 100
+I2_total_all_outcome   <- (sigma_species_all_outcome + sigma_study_all_outcome + sigma_exp_all_outcome) / total_var_all_outcome * 100
+
+I2_species_all_outcome; I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
+
+
+
+
