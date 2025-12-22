@@ -82,7 +82,7 @@ feed_data$intervention_preparation <- as.factor(feed_data$intervention_preparati
 print(feed_data)
 
 #Summarise number of studies and effect sizes
-feed_dataset <- feed %>%
+feed_dataset <- feed_data %>%
   summarise(
     n_studies = n_distinct(study_ID),
     n_effects = n_distinct(experiment_ID),
