@@ -1,3 +1,78 @@
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", 
+"meta", "metafor", "clubSandwich", "robumeta", "devtools", "MASS"))
+
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(rnaturalearth)  
+library(rnaturalearthdata)
+library(sf)              
+library(ggplot2)
+library(grid)
+library(patchwork)
+library(here)
+library(metafor)
+library(meta)
+library(clubSandwich)
+library(robumeta)
+library(MASS)
+
+#install.packages("pacman")
+rm(list = ls())
+devtools::install_github("daniel1noble/orchaRd", ref = "main", force = TRUE)
+pacman::p_load(devtools, tidyverse, metafor, patchwork, R.rsp, orchaRd, emmeans, ape, phytools, flextable)
+
+###Please download GitHub repository and then run the following
+here()
+mydata <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "Ulva inclusion in Haliotis sp. diets_A Meta-analysis - Data"))
+head(mydata)
+
+#Add another column to assign short citation
+citations <- data.frame(
+  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009", "S010", "S011"),
+  short_citation = c(
+    "Bansemer et al. (2016)",
+    "Lange et al. (2014)",
+    "Stone et al. (2022)",
+    "Francis et al. (2021)",
+    "Mwangudza (2024)",
+    "Falade (2023)",
+    "Bates et al. (2017)",
+    "Chi et al. (2018)",
+    "Angell et al. (2012)",
+    "Searle et al. (2025)", 
+    "Duong et al. (2021)" 
+  ))
+
+mydata <- mydata %>%
+  left_join(citations, by = "study_ID")
+
+#Add long outcome names
+mydata <- mydata %>%
+  mutate(
+    outcome_long = case_when(
+      outcome == "FI"  ~ "Feed intake",
+      outcome == "BG"  ~ "Biomass gain",
+      outcome == "CF"  ~ "Condition factor",
+      outcome == "FW"  ~ "Final weight",
+      outcome == "FSL" ~ "Final shell length",
+      outcome == "SG"  ~ "Shell gain",
+      outcome == "SGR" ~ "Specific growth rate",
+      outcome == "WG"  ~ "Weight gain",
+      outcome == "EER" ~ "Energy efficiency ratio",
+      outcome == "ED"  ~ "Energy deposition",
+      outcome == "FCR" ~ "Feed conversion ratio",
+      outcome == "PER" ~ "Protein efficiency ratio",
+      outcome == "PD"  ~ "Protein deposition",
+      outcome == "LG"  ~ "Length gain",
+      outcome == "I" ~ "Ingested feed energy", 
+      outcome == "Pg" ~ "Somatic feed energy", 
+      outcome == "S" ~ "Shell growth energy",
+      TRUE ~ outcome
+    )
+  )
+
 ######### Nutrient Utilisation
 # Filter for nutrient utilisation
 nutrient_data <- mydata %>%
