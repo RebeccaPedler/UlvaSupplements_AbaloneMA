@@ -503,7 +503,7 @@ opt_dose <- -beta1 / (2 * beta2)
 opt_dose
 
 # Variance-covariance for linear and quadratic dose
-vc <- vcov(res_feed_combined)[c("intervention_dose","I(intervention_dose^2)"),
+vc <- vcov(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)"),
                                c("intervention_dose","I(intervention_dose^2)")]
 
 # Delta method
@@ -523,29 +523,26 @@ ci_opt <- c(
 )
 ci_opt
 
-coefs <- coef(res_feed_combined)[c("intervention_dose","I(intervention_dose^2)")]
-vc <- vcov(res_feed_combined)[c("intervention_dose","I(intervention_dose^2)"),
+coefs <- coef(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)")]
+vc <- vcov(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)"),
                                c("intervention_dose","I(intervention_dose^2)")]
 n_sims <- 10000
 sim_coefs <- mvrnorm(n_sims, mu = coefs, Sigma = vc)
 opt_sims <- -sim_coefs[,1] / (2 * sim_coefs[,2])
 
-pred_opt <- beta0 + beta1*opt_dose + beta2*opt_dose^2 + beta_prep
+pred_opt <- beta0 + beta1*opt_dose + beta2*opt_dose^2
 pred_opt
 
 beta0_sim <- coef(res_feed_combined)["intrcpt"]
-beta_prep_sim <- coef(res_feed_combined)["intervention_preparationmeal"]
+beta_prep_sim <- coef(res_dose_quadratic)["intervention_preparationmeal"]
 
 # Combine into simulation
 full_coefs <- cbind(
-  beta0 = beta0_sim <- rnorm(n_sims, mean=beta0, sd=sqrt(vcov(res_feed_combined)["intrcpt","intrcpt"])),
+  beta0 = beta0_sim <- rnorm(n_sims, mean=beta0, sd=sqrt(vcov(res_dose_quadratic)["intrcpt","intrcpt"])),
   beta1 = sim_coefs[,1],
-  beta2 = sim_coefs[,2],
-  beta_prep = rnorm(n_sims, mean=beta_prep, sd=sqrt(vcov(res_feed_combined)["intervention_preparationmeal","intervention_preparationmeal"]))
-)
-pred_sims <- full_coefs[,1] + full_coefs[,2]*opt_sims + full_coefs[,3]*opt_sims^2 + full_coefs[,4]
+  beta2 = sim_coefs[,2])
+pred_sims <- full_coefs[,1] + full_coefs[,2]*opt_sims + full_coefs[,3]*opt_sims^2
 quantile(pred_sims, probs = c(0.025,0.975))
-
 
 #Prepare prediction data
 dose_seq <- seq(min(feed_data$intervention_dose),
@@ -553,7 +550,7 @@ dose_seq <- seq(min(feed_data$intervention_dose),
                 length.out = 100)
 
 # Predict from quadratic meta-regression
-pred <- predict(res_3L_feed_quad, newmods = cbind(dose_seq, dose_seq^2))
+pred <- predict(res_dose_quadratic, newmods = cbind(dose_seq, dose_seq^2))
 
 df_plot <- data.frame(
   dose = dose_seq,
@@ -564,14 +561,14 @@ df_plot <- data.frame(
 
 #Plot
 ggplot(df_plot, aes(x = dose, y = pred)) +
-  geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), alpha = 0.2, fill = "skyblue") +
-  geom_line(color = "blue", linewidth = 1) +
+  geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), alpha = 0.2, fill = "grey") +
+  geom_line(color = "black", linewidth = 1) +
   geom_point(data = feed_data, aes(x = intervention_dose, y = g_feed),
              color = "black", fill = "white", shape = 21, size = 3) +
-  geom_vline(xintercept = opt_dose, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = opt_dose, linetype = "dashed", color = "black") +
 annotate("text", x = opt_dose, y = max(df_plot$pred) + 1.5, 
          label = paste0("Optimum dose ≈ ", round(opt_dose,1), "%"), 
-         color = "red", hjust = 0.5, vjust = 0, size = 5) +
+         color = "black", hjust = 0.5, vjust = 0, size = 5) +
   labs(
     title = "",
     x = "Ulva Dose (%)",
@@ -579,10 +576,11 @@ annotate("text", x = opt_dose, y = max(df_plot$pred) + 1.5,
   ) +
   theme_minimal(base_size = 14) +
   theme(
-    panel.grid = element_blank(),                        # remove internal gridlines
+    panel.grid = element_blank(),                        
     axis.line = element_line(color = "black", linewidth = 0.8), # black axis
     axis.ticks.length = unit(0.3, "cm"),
     axis.ticks = element_line(color = "black"),
     plot.title = element_text(face = "bold", hjust = 0.5),
-    axis.title.x = element_text(margin = margin(t = 15)),  # more space from x axis
-    axis.title.y = element_text(margin = margin(r = 15))   # more space from y axis
+    axis.title.x = element_text(margin = margin(t = 15)), 
+    axis.title.y = element_text(margin = margin(r = 15))  
+  )
