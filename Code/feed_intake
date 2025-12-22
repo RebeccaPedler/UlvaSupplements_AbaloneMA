@@ -81,6 +81,15 @@ feed_data <- mydata %>%
 feed_data$intervention_preparation <- as.factor(feed_data$intervention_preparation)
 print(feed_data)
 
+#Summarise number of studies and effect sizes
+feed_dataset <- feed %>%
+  summarise(
+    n_studies = n_distinct(study_ID),
+    n_effects = n_distinct(experiment_ID),
+    .groups = "drop"
+  )
+feed_dataset
+
 # Calculate effect size (Hedges g) and pooled SD
 feed_data <- feed_data %>%
   mutate(
