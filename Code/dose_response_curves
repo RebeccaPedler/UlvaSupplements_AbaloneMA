@@ -105,3 +105,91 @@ optimum_growth <- ggplot(growth_data, aes(x = intervention_dose, y = g_growth)) 
   )
 
 (optimum_feed | optimum_growth)
+
+#Calculating optimum dose
+# Extract coefficients
+coefs <- coef(res_dose_quadratic)
+beta0 <- coefs["intrcpt"]
+beta1 <- coefs["intervention_dose"]
+beta2 <- coefs["I(intervention_dose^2)"]
+
+# Calculate optimum dose (minimum of quadratic)
+opt_dose <- -beta1 / (2 * beta2)
+opt_dose
+
+# Delta method to estimate SE of optimum dose
+vc <- vcov(res_dose_quadratic)[c("intervention_dose","I(intervention_dose^2)"),
+                               c("intervention_dose","I(intervention_dose^2)")]
+d_beta1 <- -1 / (2 * beta2)
+d_beta2 <- beta1 / (2 * beta2^2)
+
+var_opt <- d_beta1^2 * vc["intervention_dose","intervention_dose"] +
+           d_beta2^2 * vc["I(intervention_dose^2)","I(intervention_dose^2)"] +
+           2 * d_beta1 * d_beta2 * vc["intervention_dose","I(intervention_dose^2)"]
+
+se_opt <- sqrt(var_opt)
+
+# 95% CI for optimum dose
+ci_opt <- c(
+  optimum_dose = opt_dose,
+  CI_lower = opt_dose - 1.96 * se_opt,
+  CI_upper = opt_dose + 1.96 * se_opt
+)
+ci_opt
+
+# Optional: simulation to propagate uncertainty (robust)
+n_sims <- 10000
+sim_coefs <- mvrnorm(n_sims, mu = coefs[c("intervention_dose","I(intervention_dose^2)")], 
+                     Sigma = vc)
+opt_sims <- -sim_coefs[,1] / (2 * sim_coefs[,2])
+
+# Predict effect size at optimum dose
+beta0_sim <- rnorm(n_sims, mean = beta0, 
+                   sd = sqrt(vcov(res_dose_quadratic)["intrcpt","intrcpt"]))
+pred_sims <- beta0_sim + sim_coefs[,1]*opt_sims + sim_coefs[,2]*opt_sims^2
+
+pred_opt_CI <- quantile(pred_sims, probs = c(0.025, 0.975))
+pred_opt_CI
+
+# Prepare prediction data for dose–response curve
+dose_seq <- seq(min(nutrient_data$intervention_dose),
+                max(nutrient_data$intervention_dose),
+                length.out = 100)
+
+pred <- predict(res_dose_quadratic, 
+                newmods = cbind(dose_seq, dose_seq^2))
+
+df_plot <- data.frame(
+  dose = dose_seq,
+  pred = pred$pred,
+  ci.lb = pred$ci.lb,
+  ci.ub = pred$ci.ub
+)
+
+# Plot dose–response curve with optimum dose
+optimum_plot_nutrient <- ggplot(df_plot, aes(x = dose, y = pred)) +
+  geom_ribbon(aes(ymin = ci.lb, ymax = ci.ub), alpha = 0.2, fill = "darkgrey") +
+  geom_line(color = "black", linewidth = 1) +
+  geom_point(data = nutrient_data, aes(x = intervention_dose, y = g_nutrient),
+             color = "black", fill = "grey", shape = 21, size = 3) +
+  geom_vline(xintercept = opt_dose, linetype = "dashed", color = "black") +
+  annotate("text", x = opt_dose, y = max(df_plot$pred) + 0.5,
+           label = paste0("Optimum dose ≈ ", round(opt_dose, 1), "%"),
+           color = "black", hjust = 0.5, vjust = 0, size = 5) +
+  labs(
+    x = "Ulva Dose (%)",
+    y = "Effect Size (Hedges' g)",
+    title = "Dose–response relationship of Ulva inclusion on nutrient effect"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    plot.title = element_text(face = "bold", hjust = 0.05),
+    axis.title.x = element_text(margin = margin(t = 15)), 
+    axis.title.y = element_text(margin = margin(r = 15))  
+  )
+
+optimum_plot_nutrient
