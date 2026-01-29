@@ -1,6 +1,14 @@
-install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
+# Project: Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
 
-# Load necessary libraries
+## Step3: Data checking and summarising. 
+
+## Working with the raw data for meta-analysis - main data set.
+
+## Install packages
+# install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
+
+
+## Load required libraries
 library(dplyr)
 library(tidyr)
 library(tidyverse)
@@ -12,12 +20,12 @@ library(grid)
 library(patchwork)
 library(here)
 
-###Please download GitHub repository and then run the following
-here()
-mydata <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "Ulva inclusion in Haliotis sp. diets_A Meta-analysis - Data.csv"))
-head(mydata)
+## Load data
+mydata <- read_csv(here("Data", "raw_data.csv"))
+dim(mydata)
+names(mydata)
 
-#Add another column to assign short citation
+## Add another column to assign short citation for each study
 citations <- data.frame(
   study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009", "S010", "S011"),
   short_citation = c(
@@ -34,8 +42,10 @@ citations <- data.frame(
     "Duong et al. (2021)" 
   ))
 
+mydata <- dplyr::left_join(mydata, citations, by = "study_ID")
+dim(mydata)
 
-#Add long outcome names
+## Add long outcome names
 mydata <- mydata %>%
   mutate(
     outcome_long = case_when(
@@ -60,18 +70,74 @@ mydata <- mydata %>%
     )
   )
 
-data <- dplyr::left_join(mydata, citations, by = "study_ID")
-head(data)
 
-#####Study Characteristics
+##### Study Characteristics
 
 # Get unique study IDs
-unique_ids <- unique(mydata$study_ID)
-print(unique_ids)
-total_studies <- length(unique(data$study_ID))
-print(total_studies)
+#mydata$study_ID
+length(unique(mydata$study_ID)) #11
 
-# Step 1: Summarise number of records per species–outcome combination
+## Rename experiment_ID to ES_ID
+mydata <- mydata %>%
+  rename(ES_ID = experiment_ID)
+
+## Number of ES_ID (observations) per study
+mydata %>%
+  group_by(study_ID) %>%
+  summarise(
+    n_experiments = n_distinct(ES_ID),
+    .groups = "drop"
+  ) %>%
+  summarise(
+    min    = min(n_experiments),
+    max    = max(n_experiments),
+    mean   = mean(n_experiments),
+    median = median(n_experiments)
+  )
+
+## Count number of ES_ID (observations) per outcome
+mydata %>%
+  group_by(outcome_long) %>%
+  summarise(
+    count = n(),      
+    .groups = "drop"
+  )
+
+## Count number of ES_ID (observations) per outcome category
+mydata %>%
+  group_by(outcome_category) %>%
+  summarise(
+    count = n(),        
+    .groups = "drop"
+  )
+
+## Count number of ES_ID (observations) per species
+mydata %>%
+  group_by(species) %>%
+  summarise(
+    count = n(),        # number of times each combo appears
+    .groups = "drop"
+  )
+
+# Fix species names in mydata - replace word "Haliotis" with "H.":
+mydata <- mydata %>%
+  mutate(
+    species = gsub("Haliotis", "H.", species)
+  ) %>%
+  mutate(
+    species = gsub(" x ", "_x_", species)
+  )
+
+## Check consistency of categorisation of outcomes:
+table(mydata$outcome_long, mydata$outcome_category) #Final weight categorised both as growth performance and feed behaviour - need to fix this.
+
+## Fix outcome category for "Final weight" to be "growth performance"
+mydata <- mydata %>%
+  mutate(outcome_category = ifelse(outcome_long == "Final weight", "growth performance", outcome_category)
+  )
+
+
+## Count number of records per species–outcome combination
 bubble_data <- mydata %>%
   group_by(species, outcome_long, outcome_category) %>%
   summarise(
@@ -79,8 +145,9 @@ bubble_data <- mydata %>%
     .groups = "drop"
   )
 
-# Step 2: Build the bubble plot
-bubble_plot_species <- ggplot(bubble_data, aes(x = species, y = outcome_long)) +
+
+## Build a bubble plot with y-axis ordered by total counts per outcome and x by species:
+bubble_plot_species <- ggplot(bubble_data, aes(x = fct_infreq(species), y = fct_rev(fct_infreq(outcome_long)) )) +
   geom_point(
     aes(size = count, fill = outcome_category),
     shape = 21,
@@ -100,29 +167,19 @@ bubble_plot_species <- ggplot(bubble_data, aes(x = species, y = outcome_long)) +
     )
   ) +
   labs(
-    title = "A",
+    #title = "A",
     x = "Species",
     y = "Outcome",
     size = "Number of Observations",
     fill = "Outcome Category"
   ) +
-  scale_x_discrete(labels = function(x) {
-    sapply(x, function(label) {
-      if (grepl(" x ", label)) {
-        parts <- strsplit(label, " ")[[1]]
-        paste0(parts[1], " ", parts[2], "\n", parts[3], "\n", parts[4], " ", parts[5])
-      } else {
-        label
-      }
-    })
-  }) +
   guides(
     size = guide_legend(override.aes = list(size = 8)),
     fill = guide_legend(override.aes = list(size = 8))
   ) +
   theme_minimal(base_size = 14) +
   theme(
-    axis.text.x = element_text(hjust = 0.5, face = "italic"),
+    axis.text.x = element_text(hjust = 1, face = "italic", angle = 45),
     axis.text.y = element_text(size = 10),
     plot.title = element_text(face = "bold", hjust = 0.05),
     panel.grid.major = element_line(color = "grey85"),
@@ -130,15 +187,16 @@ bubble_plot_species <- ggplot(bubble_data, aes(x = species, y = outcome_long)) +
     axis.ticks.length = unit(0.25, "cm"),
     axis.ticks = element_line(color = "black"),
     axis.line = element_line(color = "black"),
-    axis.ticks.outside = TRUE,
     panel.border = element_blank(),
     legend.position = "right"
   ) +
   coord_cartesian(clip = "off")
+
+## Show the plot:
 bubble_plot_species
 
 
-# Recode country names to match rnaturalearth conventions
+## Recode country names to match rnaturalearth conventions
 mydata <- mydata %>%
   mutate(country_standardised = case_when(
     country == "Australia"     ~ "Australia",
@@ -154,6 +212,7 @@ mydata <- mydata %>%
     TRUE                       ~ country                      # default: keep original
   ))
 
+## Summarise data by country
 country_summary <- mydata %>%
   group_by(country_standardised) %>%
   summarise(
@@ -164,24 +223,26 @@ country_summary <- mydata %>%
   rename(name = country_standardised)
 print(country_summary)
 
-# Get world map shapefile
-world <- ne_countries(scale = "medium", returnclass = "sf")
 
-# Join country summary with world shapefile
+## Get world map shapefile for plotting and remove Antarctica:
+world <- ne_countries(scale = "medium", returnclass = "sf")
+world <- world %>% filter(name != "Antarctica") #remove the continent from the spatial object for cleaner mapping
+
+## Join country summary with world shapefile:
 world_data <- world %>%
   left_join(country_summary, by = "name")
 
-# Step 4: Plot heat map
+## Plot heat map of frequency by country:
 world_map <- ggplot(world_data) +
   geom_sf(aes(fill = observation_count)) +
   scale_fill_gradient(
     low = "#deebf7",
     high = "#08306b",
     na.value = "grey90",
-    name = "Number of\nObservations"   # line break in legend title
+    name = "Number of\nComparisons"   # line break in legend title
   ) +
   labs(
-    title = "B",
+    #title = "B",
     caption = "Grey areas = no studies"
   ) +
   theme_minimal() +
@@ -191,88 +252,240 @@ world_map <- ggplot(world_data) +
     plot.title = element_text(face = "bold"),
     plot.subtitle = element_text(face = "italic"),
     panel.grid = element_blank()           # remove all gridlines
-  )
+  )   +
+  theme(legend.position = "bottom") #+ # Move legend to bottom
 
-# Combine side by side with one shared legend
-species_and_map_combined <- bubble_plot_species + world_map +
-  plot_annotation(tag_levels = 'A') &          # & applies theme to all plots
-  theme(plot.tag = element_text(face = "bold", size = 14))
-species_and_map_combined
+## Display the plot:
+world_map
 
-# List validity metrics
-validity_metrics <- c(
-  "random_assignment",
-  "blind_measurement",
-  "protocol_registration",
-  "raw_data_availability",
-  "source_code_availability",
-  "funding_disclosed",
-  "funding_potential_COI",
-  "COI_disclosed"
-)
 
-# Loop through each metric and summarise
-validity_summary <- data %>%
-  select(study_ID, all_of(validity_metrics)) %>%
-  distinct() %>%
-  pivot_longer(
-    cols = all_of(validity_metrics),
-    names_to = "metric",
-    values_to = "value"
-  ) %>%
-  group_by(metric, value) %>%
-  summarise(
-    study_count = n(),
-    percentage = 100 * study_count / total_studies,
-    .groups = "drop"
-  ) %>%
-  arrange(metric, desc(study_count))
+# # Combine side by side with one shared legend = NOT YET (also it should be vertical not horizontal)
+# species_and_map_combined <- bubble_plot_species + world_map +
+#   plot_annotation(tag_levels = 'A') &          # & applies theme to all plots
+#   theme(plot.tag = element_text(face = "bold", size = 14))
+# species_and_map_combined
 
-print(validity_summary)
 
-# Summarise number and percentage of unique studies per publication year
-publication_summary <- data %>%
+### Summarise number and percentage of unique studies per publication year
+#table(mydata$study_ID, mydata$publication_year)
+publication_summary <- mydata %>%
   distinct(study_ID, publication_year) %>%
   group_by(publication_year) %>%
   summarise(unique_study_count = n()) %>%
   mutate(
-    percentage = 100 * unique_study_count / total_studies,
+    percentage = 100 * unique_study_count / 11,
     label_percent = paste0(round(percentage, 1), "%"),
     label_count = unique_study_count
   )
 print(publication_summary)
 
-#Summarise study design characteristics
-vars_characteristics <- c("study_duration_days", "initial_size_g", "water_temperature")
-summary_stats_characteristics <- data.frame(
-  variable = vars_characteristics,
-  median = sapply(mydata[vars_characteristics], median, na.rm = TRUE),
-  min = sapply(mydata[vars_characteristics], min, na.rm = TRUE),
-  max = sapply(mydata[vars_characteristics], max, na.rm = TRUE)
-)
-summary_stats_characteristics
 
-#species summary
-species_summary <- mydata %>%
-  group_by(species) %>%
-  summarise(
-    n_experiments = n_distinct(experiment_ID),
-    n_studies     = n_distinct(study_ID),
-    .groups = "drop"
-  )
-species_summary
+### Check study validity metrics (study-level variables)
 
-# Number of experiments per study
-study_experiment_summary <- mydata %>%
-  group_by(study_ID) %>%
-  summarise(
-    n_experiments = n_distinct(experiment_ID),
-    .groups = "drop"
-  ) %>%
-  summarise(
-    min_experiments    = min(n_experiments),
-    max_experiments    = max(n_experiments),
-    mean_experiments   = mean(n_experiments),
-    median_experiments = median(n_experiments)
+## Simple frequency tables for each validity metric:
+table(mydata$study_ID, mydata$random_assignment) #5/11 yes, 6/11 no
+table(mydata$study_ID, mydata$blind_measurement) #all no
+table(mydata$study_ID, mydata$protocol_registration) #all no
+table(mydata$study_ID, mydata$raw_data_availability) #all no
+table(mydata$study_ID, mydata$raw_data_availability)  #all no
+table(mydata$study_ID, mydata$funding_disclosed)  #all yes
+table(mydata$study_ID, mydata$funding_potential_COI)  #8/11 yes, 3/11 no
+table(mydata$study_ID, mydata$COI_disclosed)  #3/11 have COI statement, with 1 COI disclosed
+table(mydata$study_ID, mydata$publication_type) #3/11 Grey literature, 8/11 Primary literature
+
+
+## Simple frequency tables for each study design characteristics for numbers of effect sizes and numbers of studies per moderator value:
+
+table(mydata$study_ID, mydata$study_duration_days)  #4-2733 days, 2 studies have 2 durations
+#colSums(table(mydata$study_ID, mydata$study_duration_days) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$initial_size_g)  #0.54 - 94.73g, 2 studies have 2-3 initial sizes
+#colSums(table(mydata$study_ID, mydata$initial_size_g) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$water_temperature) #12-26.5C, 7 studies have 2-3 temperatures, one study has 3 ranges of temperatures (S003)
+#colSums(table(mydata$study_ID, mydata$water_temperature) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$experimental_system) # 7 Laboratory; 4 Land-based farm
+#colSums(table(mydata$study_ID, mydata$experimental_system) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$experimental_unit) # 2 Basket, cage and/or net; 2 Raceway; 7 Tank-based
+#colSums(table(mydata$study_ID, mydata$experimental_unit) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$intervention_species) # 6 studies report "Ulva sp.", 5 give species name - each a different one - not good for analyses
+#colSums(table(mydata$study_ID, mydata$intervention_species) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$intervention_preparation)  # 9 studies use meal, 1 liquid fermented, 1 protein extract - not good for analyses
+#colSums(table(mydata$study_ID, mydata$intervention_preparation) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$intervention_dose)  #0.25-30 dose levels, 5 studies have multiple dose levels
+#colSums(table(mydata$study_ID, mydata$intervention_dose) != 0)  #counts of studies per moderator value
+
+table(mydata$study_ID, mydata$feeding_conditions)  # 10 studies treated daily, 1 study treated Once
+#colSums(table(mydata$study_ID, mydata$feeding_conditions) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$study_conditions)  # 11 studies have Basal conditions, 2 challenge (both Basal and Challenge)
+#colSums(table(mydata$study_ID, mydata$study_conditions) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$challenge_category) # 2 studies have both basal conditions (NA) and Thermal challenge
+#colSums(table(mydata$study_ID, mydata$challenge_category) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$units) #mix of unites.; au = arbitrary units
+#colSums(table(mydata$study_ID, mydata$units) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$proportional_data) #all No - needs more checking!
+#colSums(table(mydata$study_ID, mydata$proportional_data) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$control_n_description) #1 study at indiv. abalone-level (1ES), 10 at Tank-level, 1 at chamber level
+#colSums(table(mydata$study_ID, mydata$control_n_description) != 0) # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$control_n)  #3-5 tanks sample sizes; some studies have different sample sizes for different outcomes
+#colSums(table(mydata$study_ID, mydata$control_n) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$treatment_n)  #3-5 tanks sample sizes; some studies have different sample sizes for different outcomes
+#colSums(table(mydata$study_ID, mydata$treatment_n) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$outcome_long)  # many outcomes just in 1 study
+#colSums(table(mydata$study_ID, mydata$outcome_long) != 0)  # counts of studies per moderator value
+
+table(mydata$study_ID, mydata$outcome_category)  # 5-9 studies per outcome category, but some have very few observations; some studies have only 1 outcome category
+#colSums(table(mydata$study_ID, mydata$outcome_category) != 0)  # counts of studies per moderator value
+
+
+## Some two-way tables to look at teh overlaps at the observations level (examples - check distribution of other moderators as needed):
+table(mydata$study_duration_days, mydata$outcome_category)
+table(mydata$water_temperature, mydata$outcome_category)
+table(mydata$intervention_dose, mydata$outcome_category)
+table(mydata$experimental_system, mydata$outcome_category)
+table(mydata$experimental_unit, mydata$outcome_category)
+
+
+## Check and fix proportional_data column based on units:
+## In mydata$units raplace "au" with "arbitrary unts":
+mydata <- mydata %>%  mutate(units = ifelse(units == "au", "arbitrary units", units)  )
+
+## Two way table to match units to proportional_data:
+table(mydata$units, mydata$proportional_data) #FIX: %, %BW/day, g/100g BW/day, g/kg abalone/day - are any a true % = proportions (range 0-1)?
+
+## Show records with units == "%":
+mydata %>% filter(units %in% c("%")) %>% View() #"Energy deposition" and "Protein deposition"  are true %, butweight gain is >100% in some cases - so data are proportional (not true %)
+## Show records with units == "%BW/day":
+mydata %>% filter(units %in% c("%BW/day")) %>% View() #growth or feed intake - not true %
+## Show records with units == "g/100g BW/day":
+mydata %>% filter(units %in% c("g/100g BW/day")) %>% View() #feed intake - not true %
+## Show records with units == "g/kg abalone/day":
+mydata %>% filter(units %in% c("g/kg abalone/day")) %>% View() #feed intake - not true %
+
+## Fix proportional_data column to "Yes" if units == "%") AND (otcome_long == "Energy deposition":
+mydata <- mydata %>%
+  mutate(proportional_data = ifelse(
+    units == c("%") & outcome_long %in% c("Energy deposition", "Protein deposition"),
+    "Yes",
+    proportional_data
+  ))
+
+## Two way table to match units to proportional_data:
+table(mydata$units, mydata$proportional_data) #FIX: %, %BW/day, g/100g BW/day, g/kg abalone/day - are any a true % = proportions (range 0-1)?
+
+
+# ## Summarise study design characteristics
+# vars_characteristics <- c("study_duration_days", "initial_size_g", "water_temperature")
+# summary_stats_characteristics <- data.frame(
+#   variable = vars_characteristics,
+#   median = sapply(mydata[vars_characteristics], median, na.rm = TRUE),
+#   min = sapply(mydata[vars_characteristics], min, na.rm = TRUE),
+#   max = sapply(mydata[vars_characteristics], max, na.rm = TRUE)
+# )
+# summary_stats_characteristics
+
+
+
+### Summarise and check values relevant for effect sizes
+
+## Check for any missing means, SDs, SEs,  or sample sizes:
+mydata %>%  filter(is.na(treatment_mean) | is.na(control_mean)) %>% dim() # No missing means found
+mydata %>%  filter(is.na(treatment_SD) | is.na(control_SD)) %>% dim()   # No missing SDs found
+mydata %>%  filter(is.na(treatment_SE) | is.na(control_SE)) %>% dim()   # 72 missing SEs found
+mydata %>%  filter(is.na(treatment_n) | is.na(control_n)) %>% dim()    # No missing sample sizes found
+
+## Fill in misssing SE from SD and n:
+mydata <- mydata %>%
+  mutate(
+    treatment_SE = ifelse(is.na(treatment_SE), treatment_SD / sqrt(treatment_n), treatment_SE),
+    control_SE
+    = ifelse(is.na(control_SE), control_SD / sqrt(control_n), control_SE)
   )
-study_experiment_summary
+
+## Check again for any missing SEs:
+mydata %>%  filter(is.na(treatment_SE) | is.na(control_SE)) %>% dim()   # No missing SEs found now
+
+
+
+## Check for any zero means or SDs that would cause issues with effect size calculations:
+mydata %>%  filter(treatment_mean == 0 | control_mean == 0) %>% dim() # No zero means found
+mydata %>%  filter(treatment_SD == 0 | control_SD == 0) %>% dim()   # 4 zero SDs found: S004.11, S004.22, S004.23, S004.35 - problematic for ES calculations
+
+
+### CV
+# Note: Coefficient of Variation (CV = \(\sigma /\mu \)).
+# Bbiological data usually display a CV between 0.05 (5%) and 0.5 (50%), so need to check for atypical values
+
+## Calculate treatment CV - treatment_SD to treatment_mean ratio:
+
+mydata <- mydata %>%
+  mutate(control_CV = control_SD / control_mean) %>%
+  mutate(treatment_CV = treatment_SD / treatment_mean)
+
+## get the ranges of CV:
+range(mydata$control_CV)
+range(mydata$treatment_CV)
+
+## make hjostograms of CV:
+ggplot(mydata, aes(x = control_CV)) +
+  geom_histogram(binwidth = 0.01, fill = "steelblue", color = "black") +
+  labs(
+    title = "Distribution of Treatment Mean to SD Ratio (CV)",
+    x = "CV",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+ggplot(mydata, aes(x = treatment_CV)) +
+  geom_histogram(binwidth = 0.01, fill = "steelblue", color = "black") +
+  labs(
+    title = "Distribution of Treatment Mean to SD Ratio (CV)",
+    x = "CV",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+
+## Show rows with CV == 0:
+mydata %>% filter(treatment_CV == 0 | control_CV == 0) %>% View() # 4 rows with zero SDs (all S004, mostly arbitrary=y units) - CHECK MANUALLY! (and substitute)
+#mydata %>% filter(study_ID == "S004") %>% View() # see all records from S004
+
+## Replace zero SDs with 0.02 and SEs with 0.01 (smallest non-zero values from the same study and measurement units) to avoid issues in ES calculations:
+mydata <- mydata %>%
+  mutate(
+    treatment_SD = ifelse(treatment_SD == 0, 0.02, treatment_SD),
+    treatment_SE = ifelse(treatment_SE == 0, 0.01, treatment_SE),
+    control_SD = ifelse(control_SD == 0, 0.02, control_SD),
+    control_SE = ifelse(control_SE == 0, 0.01, control_SE)
+  )
+
+## Show rows with CV < 0.005 (141 has <0.05):
+mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # 14 rows with low SDs (including 4 with 0) - CHECK MANUALLY and fix SDs, SEs here using R code, if needed!
+
+## Show rows with CV > 0.5:
+mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows with high SDs - CHECK MANUALLY and fix SDs, SEs here using R code,  if needed!
+
+
+### Save cleaned data for meta-analysis
+write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
+
+## TODO:
+#[] data checks and fixing (see comments above)
+#[] summarise study characteristics (some done above) - could be a table or a diagram/inforgraphics
+
+### End of script ###
+
+### NEXT ###: Use cleaned data from the output file *"cleaned_data_for_meta_analysis.csv"* to calculate effect sizes (lnRR and SMD). 
