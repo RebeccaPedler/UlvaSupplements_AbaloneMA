@@ -1,57 +1,37 @@
-install.packages(c("stringr","janitor", "tidyverse", "here"))
+# Project: Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
 
-# Load required libraries
+## Step1: Example script for deduplicating references downloaded from Scopus and Web of Science (WoS) sources 
+### Note: Deduplication is based on Title field, after standardizing case and removing punctuation and extra spaces
+
+## Install.packages(c("tidyverse", "here"))
+
+## Load required libraries
 library(tidyverse)
-library(janitor)
-library(stringr)
 library(here)
 
-###Please download GitHub repository and then run the following
-here()
-df <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA","Searches", "primary_literature", "WOS AND SCOPUS 05062025.csv"))
-head(data)
+## Load WoS and Scopus data
+df <- read.csv(here("Searches/primary_literature", "WOS_and_SCOPUS_combined_11092025.csv"), header = TRUE, stringsAsFactors = FALSE)
+dim(df) #997 rows
 
-# Define the file name
-df <- read.csv("WOS and SCOPUS 11092025.csv", header = TRUE, stringsAsFactors = FALSE)
-summary(df)
+names(df)
 
-# Step 1: Count original rows
-original_n <- nrow(df)
-print(original_n)
-
-# Step 2: Clean and remove duplicates
+## Clean the titles  remove duplicates
 df_unique <- df %>%
   mutate(
     Title_clean = Title %>%
-      str_to_lower() %>%                     
-      str_replace_all("[[:punct:]]", "") %>% 
-      str_replace_all("\\s+", " ") %>%       
-      str_trim()                             
+      stringr::str_to_lower() %>%                     
+      stringr::str_replace_all("[[:punct:]]", "") %>% 
+      stringr::str_replace_all("\\s+", " ") %>%       
+      stringr::str_trim()                             
   ) %>%
-  distinct(Title_clean, .keep_all = TRUE) %>%
-  select(-Title_clean)
+  distinct(Title_clean, .keep_all = TRUE)
 
-# Step 3: Count cleaned rows
-cleaned_n <- nrow(df_unique)
+dim(df_unique) #718 rows
 
-# Step 4: Report how many duplicates were removed
-cat("Original rows:", original_n, "\n")
-cat("Rows after removing duplicates:", cleaned_n, "\n")
-cat("Duplicates removed:", original_n - cleaned_n, "\n")
+## Report how many duplicates were removed
+cat("Original rows:", dim(df)[1], "\n")
+cat("Rows after removing duplicates:", dim(df_unique)[1], "\n")
+cat("Duplicates removed:", dim(df)[1] - dim(df_unique)[1], "\n")
 
-# Step 5: Write to CSV
-# Set working directory
-setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah")
-write.csv(df_unique, "cleaned_references.csv", row.names = FALSE)
-
-> cat("Original rows:", original_n, "\n")
-Original rows: 3068 
-> cat("Rows after removing duplicates:", cleaned_n, "\n")
-Rows after removing duplicates: 2132 
-> cat("Duplicates removed:", original_n - cleaned_n, "\n")
-Duplicates removed: 936 
-> # Step 5: Write to CSV
-> write.csv(df_unique, "cleaned_references.csv", row.names = FALSE)
->
-
-
+##   Write deduplicated records to CSV file
+write.csv(df_unique, here("Searches/primary_literature", "WOS_and_SCOPUS_combined_11092025_cleaned.csv"), row.names = FALSE)
