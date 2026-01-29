@@ -1,17 +1,33 @@
-install.packages(c("MetaDigitise", "here"))
+# Project: Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
 
+## Step2: Example script for extracting data from figures in original articles. 
+
+## Relevant figures were saved as image files and are stiored in "Data/figures_for_extraction" folder.
+## They are loaded one by one via MetaDigitise package for manual extraction of relevant values.
+## Output is stored as R object for incorporation in teh main data set.
+
+## Install packages
+Install.packages(c("MetaDigitise", "here"))
+
+## Load required libraries
 library(here)
 library(MetaDigitise)
 
-# Please download directory and run the following
-here()
+
+## Load images from first paper.
+
 image_dir_Falade <- here("UlvaSupplements_AbaloneMA", "Data", "figures_for_extraction", "Falade")
 
-# Start the digitising interface
+## Start  digitising process
+
+### Note: this is done ion the Console and Plots window of RStudio, not as executable code.
+### The following lines are the inputs provided during the digitising process, for the records.
+
+
 digitised_data_Falade <- metaDigitise(image_dir_Falade, summary = TRUE)
 print(digitised_data_Falade)
 
-#Image proccessing
+#Image processing
 #S006.1_CF
 1
 d
