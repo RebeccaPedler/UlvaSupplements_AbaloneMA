@@ -1,0 +1,93 @@
+Column name,Data type,Responses,Justification
+reviewer_initials,Categorical,RP,First and last name intitals of the reviewer/s responsible for extracting data from the article.
+study_ID,Categorical,S001.....,Unique identifier assigned to included studies.
+experiment_ID,Categorical,S001.1.....,Unique identifier assigned to independant experiments within included studies.
+full_citation,String (text),NA,Complete bibliographic reference.
+publication_year,Integer,NA,Year of publication.
+publication_type,Categorical,Grey-literature,"Research and information produced outside of traditional commercial or academic publishing, such as reports, theses, conference papers, and government documents."
+,,Primary literature,Original research published in peer-reviewed journals.
+country,String (text),NA,country of the first author affiliation
+random_assignment,Categorical,Yes,The article explicitly states that abalone were randomly assigned to a study container and/or dietary treatment.
+,,No,The article does not explicitly state that abalone were randomly assigned to a study container and/or dietary treatment.
+blind_measurement,Categorical,Yes,The article explicitly states that all outcome measures were measured blindly.
+,,No,The article does not explicitly state that all outcome measures were measured blindly.
+protocol_registration,Categorical,Yes,The article explicity discloses pre-registration of the study protocol.
+,,No,The article does not disclose protocol registration and/or the protocol has not been registered.
+raw_data_availability,Categorical,Yes,Access to raw data has been provided in the article. This excludes instances where data is only available upon request or any other non-relevant supplementary material has been provided.
+,,No,Access to raw data has not been provided in the article or is only available upon request.
+source_code_availability,Categorical,Yes,Access to raw code used for data analysis has been provided in the article. This excludes instances where source code is only available upon request or any other non-relevant supplementary material has been provided.
+,,No,Access to raw code used for data analysis has nnot been provided in the article or is only available upon request.
+funding_disclosed,Categorical,Yes,The source of funding for the research has been disclosed in the article.
+,,No,The source of funding for the research has not been disclosed in the article.
+funding_potential_COI,Categorical,Yes,"The source of funding presents a potential conflict of interest. This relates to any instance where atleast one funding source is an industry or other body which has invested stake in the results of the article. This includes instances where materials, facilities or labour have been provided in-kind."
+,,No,"The source of funding does not present a potential conflict of interest. This describes instances where all funding has been acquired from government bodies, research funds, not for profits, Universities or any other organisation which does not have invested stake in the results of the article."
+,,NA,The funding source was not disclosed therefore no appraisal on potential conflicts of interest can be made.
+funding_potential_COI_comment,String (text),NA,"Comment explaining decision for ""funding_potential_COI""
+
+"
+funding_potential_COI,Categorical,No COI statement,No COI statement has been provided in the article.
+,,COI statement provided - No COI disclosed,A COI statement is provided and the authors disclose no conflicts of interest.
+,,COI statement provided - COI disclosed,A COI statement is provided and the authors disclose atleast one conflict of interest.
+species,Categorical,NA,Scientific name of the species studied.
+initial_size_g,numerical,NA,Reported initial size of abalone within experiment. 
+experimental_system,Categorical,Laboratory ,Any controlled indoor research facility.
+,,Land-based farm,"A commercial aquaculture facility located on land, typically using tanks or raceways supplied with pumped seawater"
+,,Other,Any other experimental system which does not fit definitions of the above categories.
+,,sea-based farm,Any commercial aquaculture facility located off-shore (e.g. in suspended sea cages).
+experimental_unit,Categorical,"Basket, cages and/or net","Any containment system using mesh baskets or nets, typically suspended in tanks or the sea, allowing water flow while keeping abalone enclosed"
+,,Other,Any other experimental unit which does not fit definitions of the above categories.
+,,Raceway,"A long, narrow tank with continuous water flow, often used in land-based systems"
+,,Tank,"Any unit which is isolated and with clear separation of dietary treatments. This excludes instances where baskets, nets and/or cages are submerged in tanks. "
+intervention_species,Categorical,NA,Scientific name of the Ulva species used as an intervention.
+intervention_preparation,String (text),NA,"Preparation method of Ulva sp. utilised within the treatment defined in ""treatment_name"" (e.g. meal, extract etc). "
+treatment_name,String (text),NA,"Name of treatment diet (e.g. Ulva10, Diet 1 etc). "
+intervention_dose_%,String (text),NA,"Reported dose of Ulva sp. preparation included in the treatment diet defined in ""treatment_name""."
+study_duration_days,numerical,NA,The reported experimental duration in days. 
+feeding_conditions,String (text),NA,"Description of how frequently diets were provided to abalone (e.g. daily, twice daily etc). "
+outcome,Categorical,Absorbed feed energy (Ab),"The portion of ingested feed energy that is assimilated by the abalone, after accounting for fecal egestion."
+,,Biomass gain (BG),The percentage increase of whole tank biomass over a period.
+,,Condition factor (CF),An index which considers the body weight and shell length of abalone
+,,Energy efficiency ratio (EER),A measure of how efficiently dietary energy is converted into whole biomass.
+,,Energy deposition (ED),A measure of how efficiently dietary energy is assimilated into body tissue.
+,,Feed conversion ratio (FCR),A measure of how efficiently feed is converted into biomass.
+,,Feed intake (FI),A measure of how much feed is consumed by an animal
+,,Final weight (FW),Weight of animals recorded at the conclusion of the experimental period.
+,,Final shell length (FSL),Shell length of animals recorded at the conclusion of the experimental period.
+,,Ingested feed energy and/or mass specific feed energy (I),The total amount of dietary energy consumed by the abalone over the experimental period relative to it's mass.
+,,Protein efficiency ratio (PER),A measure of how efficiency dietary protein is converted into biomass.
+,,Protein deposition (PD),A measure of how much dietary protein is assimilated into body tissue.
+,,Somatic growth energy (Pg),The amount of absorbed energy that is allocated to building soft body tissue of the abalone.
+,,Shell gain (SG),The percentage increase in shell length over a period.
+,,Shell growth energy (S),The amount of absorbed energy that is allocated to building the abalone shell.
+,,Specific growth rate (SGR),"The rate of growth over time, expressed as a percentage of body weight per day."
+,,Weight gain (WG),The percentage increase in whole body mass over a period.
+outcome_category,Categorical,Feed behaviour,A measurement of how the abalone interacts with feed (i.e. feed intake).
+,,Growth performance,"Any outcome which measures the growth of the abalone (e.g. weight gain, shell length gain)."
+,,Nutrient utilisation,"Any measure which investigates utilisation of feed nutrients (i.e. SGR, FCR)"
+study_conditions,Categorical,Basal,"The study assesses performance or physiological response under normal, non-stressful conditions, which are intended to reflect “optimal” husbandry."
+,,Challenge,The experiment manipulates the environment to test the animals' tolerance and resilience under suboptimal conditions.
+challenge_category,Categorical,Air challenge,Any challenge conditions which expose abalone to air. 
+,,Bacteria challenge,Any challenge conditions which expose abalone to pathogenic bacteria species.
+,,Salinity challenge,Any challenge conditions which expose abalone to sub-optimum salinity levels. The article must disclose that the salinity is considered a challenge condition.
+,,Thermal challenge,Any challenge conditions which expose abalone to sub-optimum water temperatures. The article must disclose that the water temperature is considered a challenge condition.
+,,Other,Any other condition which does not fit definitions of the above categories but could reasonably be considered a challenge condition.
+water_temperature,numerical,NA,Reported average water temperature of experimental conditions.
+treatment_mean,numerical,NA,"Mean outcome measure (defined in ""outcome"") for treatment group (defined in ""treatment_name"")."
+treatment_SE,numerical,NA,"Standard error for outcome measure (defined in ""outcome"") for treatment group (defined in ""treatment_name"")."
+treatment_SD,numerical,NA,"Standard deviation for outcome measure (defined in ""outcome"") for treatment group (defined in ""treatment_name"")."
+treatment_n,numerical,NA,"Sample size of treatment group (defined in ""treatment_name"")."
+treatment_n_description,Categorical,Abalone,Replicates are represented by individual abalone (e.g. 1 abalone = 1 replicate). 
+,,Tank,Replicates are represented by tank containing X abalone (e.g. 30 abalone stocked in 4 different tanks = 4 replicates). 
+control_mean,numerical,NA,"Mean outcome measure (defined in ""outcome"") for control group (defined in ""control_n_description"")."
+control_SE,numerical,NA,"Standard error for outcome measure (defined in ""outcome"") for control group (defined in ""control_n_description"")."
+control_SD,numerical,NA,"Standard deviation for outcome measure (defined in ""outcome"") for control group (defined in ""control_n_description"")."
+control_n,numerical,NA,"Sample size of control group (defined in ""control_n_description"")."
+control_n_description,Categorical,Abalone,Replicates are represented by individual abalone (e.g. 1 abalone = 1 replicate). 
+,,Tank,Replicates are represented by tank containing X abalone (e.g. 30 abalone stocked in 4 different tanks = 4 replicates). 
+units,String (text),NA,Unit reported for outcome measure (e.g. %BW/day). 
+data_source,Categorical,Graph,Data was extracted from a graph by metaDigitiser R package. 
+,,Text,Data was extracted directly from text. 
+,,Table,Data was extracted directly from table. 
+proportional_data,Categorical,Yes,Outcome unit is percentage (e.g. % BW)
+,,No,Outcome unit is not a percentage (e.g. kg)
+Comment,String (text),NA,Any relevant note.
