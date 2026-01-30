@@ -21,7 +21,7 @@ library(patchwork)
 library(here)
 
 ## Load data
-mydata <- read_csv(here("Data", "raw_data.csv"))
+mydata <- read_csv(here("Data", "ulva_meta_analysis_raw_data.csv"))
 dim(mydata)
 names(mydata)
 
@@ -367,7 +367,7 @@ mydata <- mydata %>%  mutate(units = ifelse(units == "au", "arbitrary units", un
 table(mydata$units, mydata$proportional_data) #FIX: %, %BW/day, g/100g BW/day, g/kg abalone/day - are any a true % = proportions (range 0-1)?
 
 ## Show records with units == "%":
-mydata %>% filter(units %in% c("%")) %>% View() #"Energy deposition" and "Protein deposition"  are true %, butweight gain is >100% in some cases - so data are proportional (not true %)
+mydata %>% filter(units %in% c("%")) %>% View() #"Energy deposition" and "Protein deposition"  are true %, but weight gain is >100% in some cases - so data are proportional (not true %)
 ## Show records with units == "%BW/day":
 mydata %>% filter(units %in% c("%BW/day")) %>% View() #growth or feed intake - not true %
 ## Show records with units == "g/100g BW/day":
@@ -375,7 +375,7 @@ mydata %>% filter(units %in% c("g/100g BW/day")) %>% View() #feed intake - not t
 ## Show records with units == "g/kg abalone/day":
 mydata %>% filter(units %in% c("g/kg abalone/day")) %>% View() #feed intake - not true %
 
-## Fix proportional_data column to "Yes" if units == "%") AND (otcome_long == "Energy deposition":
+## Fix proportional_data column to "Yes" if units == "%") AND (outcome_long == "Energy deposition" or "Protein deposition"):
 mydata <- mydata %>%
   mutate(proportional_data = ifelse(
     units == c("%") & outcome_long %in% c("Energy deposition", "Protein deposition"),
@@ -478,7 +478,7 @@ mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # 14 row
 ## Show rows with CV > 0.5:
 mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows with high SDs - CHECK MANUALLY and fix SDs, SEs here using R code,  if needed!
 
-#ES_ID where CV > 0.05 manually checked in original publication
+#ES_ID where CV > 0.5 manually checked in original publication
 #S003.3, S006.3, S011.10, S011.11, S012.12, S002.13, S002.14 checked in article - true reported value
 
 #ES_ID where CV < 0.005 manually checked in original publication
