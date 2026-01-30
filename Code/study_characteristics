@@ -478,13 +478,86 @@ mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # 14 row
 ## Show rows with CV > 0.5:
 mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows with high SDs - CHECK MANUALLY and fix SDs, SEs here using R code,  if needed!
 
+#ES_ID where CV > 0.05 manually checked in original publication
+#S003.3, S006.3, S011.10, S011.11, S012.12, S002.13, S002.14 checked in article - true reported value
 
+#ES_ID where CV < 0.005 manually checked in original publication
+# S001.6, S004.11, S004.23, S004.35, S006.23, S006.26 - true reported value
+#SE for ES_ID = S001.16, S001.18 and S001.26 entered as 0.007, true SE from article is 0.07
+#S004.22 control_SE and treatment_SE entered wrong way around
+#S008.2, S008.8, S008.14 CONTROL_SE entered as 0.01, true SE is 0.07
+#S004.27 control_mean and control_SE data entered into treatment_mean and treatment_SE
+
+##Let's fix errors
+mydata <- mydata %>%
+  mutate(
+    # Fix incorrect control_SE
+    control_SE = case_when(
+      ES_ID %in% c("S001.16", "S001.18", "S001.26") ~ 0.07,
+      ES_ID %in% c("S008.2", "S008.8", "S008.14") ~ 0.07,
+      ES_ID == "S004.22"                          ~ 0.10,
+      TRUE ~ control_SE
+    ),
+
+    # Fix incorrect treatment_mean
+    treatment_mean = case_when(
+      ES_ID == "S004.27" ~ 99.0,
+      TRUE ~ treatment_mean
+    ),
+
+    #Fix incorrect treatment_SE
+    treatment_SE = case_when(
+      ES_ID == "S004.27" ~ 0.70,
+      ES_ID == "S004.22" ~ 0.00,
+      TRUE ~ treatment_SE
+    )
+  )
+
+##Recalculate SD and CV for ammended ES_ID
+# Define amended ES_IDs 
+amended_ES <- c(
+  "S001.16", "S001.18", "S001.26",
+  "S008.2", "S008.8", "S008.14",
+  "S004.27", "S004.22"
+)
+
+mydata <- mydata %>%
+  mutate(
+# control_SD
+    control_SD = if_else(
+      ES_ID %in% amended_ES,
+      control_SE * sqrt(control_n),
+      control_SD
+    ),
+# treatment_SD
+    treatment_SD = if_else(
+      ES_ID %in% amended_ES,
+      treatment_SE * sqrt(treatment_n),
+      treatment_SD
+    ),
+# control_CV
+    control_CV = if_else(
+      ES_ID %in% amended_ES,
+      control_SD / control_mean,
+      control_CV
+    ),
+# treatment_CV
+    treatment_CV = if_else(
+      ES_ID %in% amended_ES,
+      treatment_SD / treatment_mean,
+      treatment_CV
+    )
+  )
+
+##Now reperform CV < 0.005 checks
+## Show rows with CV < 0.005:
+mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # S001.18, S004.22, S004.27 still < 0.005 despite ammending
+  
 ### Save cleaned data for meta-analysis
 write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
 
 ## TODO:
-#[] data checks and fixing (see comments above)
-#[] summarise study characteristics (some done above) - could be a table or a diagram/inforgraphics
+#[] summarise study characteristics (some done above) - could be a table or a diagram/infographics
 
 ### End of script ###
 
