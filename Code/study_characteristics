@@ -351,13 +351,74 @@ table(mydata$study_ID, mydata$outcome_category)  # 5-9 studies per outcome categ
 #colSums(table(mydata$study_ID, mydata$outcome_category) != 0)  # counts of studies per moderator value
 
 
-## Some two-way tables to look at teh overlaps at the observations level (examples - check distribution of other moderators as needed):
+## Some two-way tables to look at the overlaps at the observations level (examples - check distribution of other moderators as needed):
 table(mydata$study_duration_days, mydata$outcome_category)
 table(mydata$water_temperature, mydata$outcome_category)
 table(mydata$intervention_dose, mydata$outcome_category)
 table(mydata$experimental_system, mydata$outcome_category)
 table(mydata$experimental_unit, mydata$outcome_category)
 
+###Create Sankey plot to investigate moderator overlap and/or potential collinearity 
+###Create alluvial plot to visualise overlap between moderators and potential collinearity
+
+##Create bins for continious numerical data and order ascending
+mydata_alluvial <- mydata %>%
+  mutate(
+    dose_cat = cut(
+      intervention_dose,
+      breaks = c(0, 2.5, 5, 10, 20, 30, Inf),
+      labels = c("≤2.5%", "2.5–5%", "5–10%", "10-20%", "20-30%", ">30%"),
+      right = TRUE
+    ),
+    
+    duration_cat = cut(
+      study_duration_days,
+      breaks = c(0, 30, 60, 120, 180, Inf),
+      labels = c("≤30 d", "30-60 d", "60–120 d", "120–180 d", ">180 d"),
+      right = TRUE
+    ),
+    
+    size_cat = cut(
+      initial_size_g,
+      breaks = c(0, 1, 10, 50, Inf),
+      labels = c("≤1 g", "1–10 g", "10–50 g", ">50 g"),
+      right = TRUE
+    ))
+
+#Makes labels ascending order
+    mydata_alluvial <- mydata_alluvial %>%
+    mutate(
+    dose_cat = factor(dose_cat, levels = c("≤2.5%", "2.5–5%", "5–10%", "10-20%", "20-30%", ">30%")),
+    duration_cat = factor(duration_cat, levels = c("≤30 d", "30-60 d", "60–120 d", "120–180 d", ">180 d")),
+    size_cat = factor(size_cat, levels = c("≤1 g", "1–10 g", "10–50 g", ">50 g")))
+
+##Prepare species names 
+#Check names 
+unique(mydata_alluvial$species)
+
+ # Replace 'Haliotis ' with 'H. '
+mydata_alluvial <- mydata_alluvial %>%
+  mutate(species = str_replace(species, "^Haliotis ", "H. "))
+
+### Create Plot     
+# pre-process
+mydata_alluvial <- mydata_alluvial %>%
+  dplyr::select(species, experimental_system,  study_conditions, intervention_preparation, dose_cat, duration_cat, size_cat) #select columns for the plot
+
+ggplot(dlong(mydata_alluvial, species, experimental_system,  study_conditions, intervention_preparation, dose_cat, duration_cat, size_cat), aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+  sankey_p(flow.alpha = 0.8,
+              node.color = "transparent") +
+  sankey_p_label(size = 3, color = "white", fill = "gray10", alpha = 0.6) +
+  ggsci::scale_color_tron() + 
+  theme_sankey(base_size = 10) +
+  labs(x = NULL) +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = .5),
+    axis.text.x = ggtext::element_markdown(color = "black", size = 8) 
+   ) +
+scale_x_discrete(labels = c("Species", "Experimental \n System", "Study \n conditions",  "Ulva \n preparation", "Ulva dose \n (%)", "Study duration \n (days)", "Initial abalone \n size (g)"), position = "top") 
+
+ggsave("Sankey_plot.png", width = 14, height = 7, units = "in")
 
 ## Check and fix proportional_data column based on units:
 ## In mydata$units raplace "au" with "arbitrary unts":
