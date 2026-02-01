@@ -19,6 +19,10 @@ library(ggplot2)
 library(grid)
 library(patchwork)
 library(here)
+library(devtools)
+
+# install.packages("devtools")
+devtools::install_github("davidsjoberg/ggsankey")
 
 ## Load data
 mydata <- read_csv(here("Data", "ulva_meta_analysis_raw_data.csv"))
