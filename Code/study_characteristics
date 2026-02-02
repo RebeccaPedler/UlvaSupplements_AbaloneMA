@@ -388,7 +388,7 @@ mydata_alluvial <- mydata %>%
     ))
 
 #Makes labels ascending order
-    mydata_alluvial <- mydata_alluvial %>%
+    mydata_allsuvial <- mydata_alluvial %>%
     mutate(
     dose_cat = factor(dose_cat, levels = c("≤2.5%", "2.5–5%", "5–10%", "10-20%", "20-30%", ">30%")),
     duration_cat = factor(duration_cat, levels = c("≤30 d", "30-60 d", "60–120 d", "120–180 d", ">180 d")),
@@ -407,19 +407,88 @@ mydata_alluvial <- mydata_alluvial %>%
 mydata_alluvial <- mydata_alluvial %>%
   dplyr::select(species, experimental_system,  study_conditions, intervention_preparation, dose_cat, duration_cat, size_cat) #select columns for the plot
 
-ggplot(dlong(mydata_alluvial, species, experimental_system,  study_conditions, intervention_preparation, dose_cat, duration_cat, size_cat), aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
-  sankey_p(flow.alpha = 0.8,
-              node.color = "transparent") +
+#Create long object
+sankey_long <- dlong(
+  mydata_alluvial,
+  species,
+  experimental_system,
+  study_conditions,
+  intervention_preparation,
+  dose_cat,
+  duration_cat,
+  size_cat
+)
+
+sankey_long <- dlong(
+  mydata_alluvial,
+  species,
+  experimental_system,
+  study_conditions,
+  intervention_preparation,
+  dose_cat,
+  duration_cat,
+  size_cat
+)
+
+#Define levels for each node and order 
+node_levels <- c(
+  # Species (leave as-is)
+  sort(unique(mydata_alluvial$species)),
+  # Experimental system
+  sort(unique(mydata_alluvial$experimental_system)),
+  # Study conditions
+  sort(unique(mydata_alluvial$study_conditions)),
+  # Preparation
+  sort(unique(mydata_alluvial$intervention_preparation)),
+  # Dose (descending order)
+  ">30%", "20-30%", "10-20%", "5–10%", "2.5–5%", "≤2.5%",
+  # Duration (descending order)
+  ">180 d", "120–180 d", "60–120 d", "30-60 d", "≤30 d",
+  # Size (descending order)
+  ">50 g", "10–50 g", "1–10 g", "≤1 g"
+)
+
+sankey_long <- sankey_long %>%
+  mutate(
+    node = factor(node, levels = node_levels),
+    next_node = factor(next_node, levels = node_levels)
+  )
+
+ggplot(
+  sankey_long,
+  aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = factor(node),
+    label = node
+  )
+) +
+  sankey_p(flow.alpha = 0.8, node.color = "transparent") +
   sankey_p_label(size = 3, color = "white", fill = "gray10", alpha = 0.6) +
-  ggsci::scale_color_tron() + 
+  ggsci::scale_color_tron() +
   theme_sankey(base_size = 10) +
   labs(x = NULL) +
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = .5),
-    axis.text.x = ggtext::element_markdown(color = "black", size = 8) 
-   ) +
-scale_x_discrete(labels = c("Species", "Experimental \n System", "Study \n conditions",  "Ulva \n preparation", "Ulva dose \n (%)", "Study duration \n (days)", "Initial abalone \n size (g)"), position = "top") 
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = .5),
+    axis.text.x = ggtext::element_markdown(color = "black", size = 8)
+  ) +
+  scale_x_discrete(
+    labels = c(
+      "Species",
+      "Experimental \n System",
+      "Study \n conditions",
+      "Ulva \n preparation",
+      "Ulva dose \n (%)",
+      "Study duration \n (days)",
+      "Initial abalone \n size (g)"
+    ),
+    position = "top"
+  )
 
+#Save plot
 ggsave("Sankey_plot.png", width = 14, height = 7, units = "in")
 
 ## Check and fix proportional_data column based on units:
