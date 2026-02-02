@@ -363,8 +363,6 @@ table(mydata$experimental_system, mydata$outcome_category)
 table(mydata$experimental_unit, mydata$outcome_category)
 
 ###Create Sankey plot to investigate moderator overlap and/or potential collinearity 
-###Create alluvial plot to visualise overlap between moderators and potential collinearity
-
 ##Create bins for continious numerical data and order ascending
 mydata_alluvial <- mydata %>%
   mutate(
