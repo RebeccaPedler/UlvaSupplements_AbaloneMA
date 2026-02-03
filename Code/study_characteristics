@@ -405,15 +405,15 @@ mydata_alluvial <- mydata_alluvial %>%
 ### Create Plot     
 # pre-process
 mydata_alluvial <- mydata_alluvial %>%
-  dplyr::select(species, experimental_system,  study_conditions, intervention_preparation, dose_cat, duration_cat, size_cat) #select columns for the plot
+  dplyr::select(experimental_system,  study_conditions, intervention_preparation, species, dose_cat, duration_cat, size_cat) #select columns for the plot
 
 #Create long object
 sankey_long <- dlong(
   mydata_alluvial,
-  species,
   experimental_system,
   study_conditions,
   intervention_preparation,
+  species,
   dose_cat,
   duration_cat,
   size_cat
@@ -421,25 +421,27 @@ sankey_long <- dlong(
 
 sankey_long <- dlong(
   mydata_alluvial,
-  species,
   experimental_system,
   study_conditions,
   intervention_preparation,
+  species,
   dose_cat,
   duration_cat,
   size_cat
 )
 
+str(sankey_long)
+
 #Define levels for each node and order 
 node_levels <- c(
-  # Species (leave as-is)
-  sort(unique(mydata_alluvial$species)),
   # Experimental system
   sort(unique(mydata_alluvial$experimental_system)),
   # Study conditions
   sort(unique(mydata_alluvial$study_conditions)),
   # Preparation
   sort(unique(mydata_alluvial$intervention_preparation)),
+  # Species (leave as-is)
+  sort(unique(mydata_alluvial$species)),
   # Dose (descending order)
   ">30%", "20-30%", "10-20%", "5–10%", "2.5–5%", "≤2.5%",
   # Duration (descending order)
@@ -466,21 +468,20 @@ ggplot(
   )
 ) +
   sankey_p(flow.alpha = 0.8, node.color = "transparent") +
-  sankey_p_label(size = 3, color = "white", fill = "gray10", alpha = 0.6) +
-  ggsci::scale_color_tron() +
+  sankey_p_label(size = 4, color = "white", fill = "gray10", alpha = 0.6) +
   theme_sankey(base_size = 10) +
   labs(x = NULL) +
   theme(
     legend.position = "none",
     plot.title = element_text(hjust = .5),
-    axis.text.x = ggtext::element_markdown(color = "black", size = 8)
+    axis.text.x = ggtext::element_markdown(color = "black", size = 10)
   ) +
   scale_x_discrete(
     labels = c(
-      "Species",
       "Experimental \n System",
       "Study \n conditions",
       "Ulva \n preparation",
+      "Species",
       "Ulva dose \n (%)",
       "Study duration \n (days)",
       "Initial abalone \n size (g)"
@@ -489,7 +490,7 @@ ggplot(
   )
 
 #Save plot
-ggsave("Sankey_plot.png", width = 14, height = 7, units = "in")
+ggsave("Sankey_plot.png", width = 20, height = 10, units = "in")
 
 ## Check and fix proportional_data column based on units:
 ## In mydata$units raplace "au" with "arbitrary unts":
