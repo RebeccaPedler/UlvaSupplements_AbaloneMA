@@ -73,38 +73,46 @@ mydata <- mydata %>%
     )
   )
 
-# Calculate effect size (Hedges g) and pooled SD
+#Arcsine transform proportional data (protein deposition and energy deposition)
+mydata <- mydata %>%
+  mutate(
+    arcsine_transformed = ifelse(
+      outcome %in% c("Protein deposition", "Energy deposition"),
+      asin(sqrt(treatment_mean / 100)),  
+      NA_real_
+    )
+  )
+
+# Calculate effect size (lnRR) and variance
 all_data <- mydata %>%
   mutate(
-    s_pooled = sqrt(((treatment_n - 1) * treatment_SD^2 + (control_n - 1) * control_SD^2) /
-                    (treatment_n + control_n - 2)),
-    J_all = 1 - (3 / (4 * (treatment_n + control_n) - 9)),
-    g_all = J_all * ((treatment_mean - control_mean) / s_pooled),
-    vi_g_all = (treatment_n + control_n) / (treatment_n * control_n) + (g_all^2 / (2 * (treatment_n + control_n - 2)))
+    lnRR_all = log(treatment_mean / control_mean),
+    vi_lnRR_all = (treatment_SD^2) / (treatment_n * treatment_mean^2) +
+              (control_SD^2) / (control_n * control_mean^2)
   )
 
 #Reverse the sign of FCR effect size
 all_data <- all_data %>%
-  mutate(g_all = ifelse(outcome == "FCR", -g_all, g_all))
+  mutate(lnRR_all = ifelse(outcome == "FCR", -lnRR_all, lnRR_all))
 
-#Run MLMA using all data.
-res_3L_all <- rma.mv(yi = g_all, V = vi_g_all,
-                 random = ~ 1 | study_ID / experiment_ID,
-                 data = all_data,
-                 method = "REML")
+# Run 3-level meta-analysis
+res_3L_all <- rma.mv(yi = lnRR_all, V = vi_lnRR_all,
+                     random = ~ 1 | study_ID / ES_ID,
+                     data = all_data,
+                     method = "REML")
 res_3L_all
 
 #Testing effect of species
 # Set species as a factor and H. laevigata as the reference (highest k)
 all_data$species <- factor(all_data$species)
-all_data$species <- relevel(all_data$species, ref = "Haliotis laevigata")
+all_data$species <- relevel(all_data$species, ref = "H. laevigata")
 
 # MLMA with species as fixed effect
 res_species_fixed <- rma.mv(
-  yi   = g_all,
-  V    = vi_g_all,
+  yi   = lnRR_all,
+  V    = vi_lnRR_all,
   mods = ~ species,                    
-  random = ~ 1 | study_ID / experiment_ID,  
+  random = ~ 1 | study_ID / ES_ID,  
   data = all_data,
   method = "REML"
 )
@@ -112,37 +120,36 @@ summary(res_species_fixed)
 
 # MLMA with species as random effect
 res_species_random <- rma.mv(
-yi   = g_all,
-V    = vi_g_all,
+yi   = lnRR_all,
+V    = vi_lnRR_all,
   random = list(
     ~ 1 | species,                  
-    ~ 1 | study_ID / experiment_ID 
+    ~ 1 | study_ID / ES_ID 
   ),
   data = all_data,
   method = "REML"
 )
 summary(res_species_random)
+
 # Compare models
 anova(res_3L_all, res_species_random)
 
 # Extract variance components
-sigma_species_all <- res_species_random$sigma2[1]
-sigma_study_all   <- res_species_random$sigma2[2]
-sigma_exp_all    <- res_species_random$sigma2[3]
+sigma_study_all   <- res_3L_all$sigma2[1]
+sigma_exp_all    <- res_3L_all$sigma2[2]
 
 # Mean sampling variance
-mean_vi_all <- mean(all_data$vi_g_all)
+mean_vi_all <- mean(all_data$vi_lnRR_all)
 
 # Total variance
-total_var_all <- sigma_species_all + sigma_study_all + sigma_exp_all + mean_vi_all
+total_var_all <- sigma_study_all + sigma_exp_all + mean_vi_all
 
 # I² calculations
-I2_species_all <- sigma_species_all / total_var_all * 100
 I2_study_all   <- sigma_study_all   / total_var_all * 100
 I2_exp_all    <- sigma_exp_all     / total_var_all * 100
 I2_total_all   <- (sigma_species_all + sigma_study_all + sigma_exp_all) / total_var_all * 100
 
-I2_species_all; I2_study_all; I2_exp_all; I2_total_all
+I2_study_all; I2_exp_all; I2_total_all
 
 #Plot orchard plot
 orchaRd::orchard_plot(
@@ -167,20 +174,19 @@ orchaRd::orchard_plot(
 # Compute SE, precision, and effective sample size for all_data
 all_data <- all_data %>%
   mutate(
-    se_g = sqrt(vi_g_all),                    # standard error of effect size
+    se_g = sqrt(vi_lnRR_all),  
     precision = 1 / se_g,                     
     n_eff = (treatment_n * control_n) / (treatment_n + control_n),
-    inv_n_eff = 1 / n_eff                       # inverse effective sample size (not sqrt)
+    inv_n_eff = 1 / n_eff                  
   )
 
 # Fit three-level MLMA with precision as moderator
 res_bias_precision_all <- rma.mv(
-  yi   = g_all,
-  V    = vi_g_all,
+  yi   = lnRR_all,
+  V    = vi_lnRR_all,
   mods = ~ precision,                       
-  random = list(
-    ~ 1 | species,                  
-    ~ 1 | study_ID / experiment_ID 
+  random = list(                  
+    ~ 1 | study_ID / ES_ID 
   ), 
   data = all_data,
   method = "REML")
@@ -195,57 +201,87 @@ cr2_test_precision <- coef_test(
 )
 print(cr2_test_precision)
 
+
+
+
 # Create funnel plot
-ggplot(all_data, aes(x = g_all, y = precision)) +
-  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  
-  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +  
+#Calculate SE
+all_data <- all_data %>%
+  mutate(SE = 1 / precision)
+
+# Create a grid of precision values for plotting the funnel
+precision_grid <- seq(min(all_data$precision), max(all_data$precision), length.out = 100)
+
+# Pooled effect (mean lnRR)
+mean_lnRR <- mean(all_data$lnRR_all, na.rm = TRUE)
+
+# Upper and lower bounds
+bounds <- data.frame(
+  precision = precision_grid,
+  lnRR_upper = mean_lnRR + 1.96 / precision_grid,
+  lnRR_lower = mean_lnRR - 1.96 / precision_grid
+)
+str(bounds)
+
+#Create plot
+funnel_plot_all <- ggplot(all_data, aes(x = lnRR_all, y = precision)) +
+  geom_ribbon(
+  data = bounds,
+  aes(xmin = lnRR_lower, xmax = lnRR_upper, y = precision),
+  fill = "white",
+  colour = "black",
+  linetype = "dotted",
+  size = 0.5,
+  inherit.aes = FALSE) +
+ geom_point(shape = 21, fill = "grey", color = "black", size = 3) +  
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +
   scale_y_continuous(name = "Precision (1/SE)") +
-  scale_x_continuous(name = "Effect Size (Hedges g)") +
+  scale_x_continuous(name = "Effect Size (lnRR)") +
   theme_minimal(base_size = 14) +
   theme(
-    panel.grid = element_blank(),
+    panel.grid.major.x = element_blank(),             
+    panel.grid.minor.x = element_blank(),             
+    panel.grid.major.y = element_line(color = "white", size = 0.5),  
+    panel.grid.minor.y = element_blank(),
+    panel.background = element_rect(fill = "grey90"),  
     axis.line = element_line(color = "black", linewidth = 0.8),
     axis.ticks.length = unit(0.3, "cm"),
     axis.ticks = element_line(color = "black"),
-    plot.title = element_text(face = "bold", hjust = 0.01)
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 16),
+    plot.title = element_text(face = "bold", hjust = 0.01, size = 18)
   ) +
   ggtitle("")
+
+ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")
 
 #Run MLMR with outcome_category as a moderator
 # Set growth performance as reference category (highest number of effect sizes)
 all_data$outcome_category <- factor(all_data$outcome_category)  # convert to factor
 all_data$outcome_category <- relevel(all_data$outcome_category, ref = "growth performance")
 
-res_meta_reg <- rma.mv(yi = g_all, V  = vi_g_all,
+res_meta_reg <- rma.mv(yi = lnRR_all, V  = vi_lnRR_all,
   mods = ~ outcome_category,        
-  random = list(
-    ~ 1 | species,                  
-    ~ 1 | study_ID / experiment_ID 
-  ),
+  random = list(                
+    ~ 1 | study_ID / ES_ID),
   data = all_data,
   method = "REML"
 )
 res_meta_reg
 
 # Extract variance components
-sigma_species_all_outcome <- res_meta_reg$sigma2[1]
-sigma_study_all_outcome   <- res_meta_reg$sigma2[2]
-sigma_exp_all_outcome    <- res_meta_reg$sigma2[3]
+sigma_study_all_outcome   <- res_meta_reg$sigma2[1]
+sigma_exp_all_outcome    <- res_meta_reg$sigma2[2]
 
 # Mean sampling variance
-mean_vi_all <- mean(all_data$vi_g_all)
+mean_vi_all <- mean(all_data$vi_lnRR_all)
 
 # Total variance
-total_var_all_outcome <- sigma_species_all_outcome + sigma_study_all_outcome + sigma_exp_all_outcome + mean_vi_all
+total_var_all_outcome <- sigma_study_all_outcome + sigma_exp_all_outcome + mean_vi_all
 
 # I² calculations
-I2_species_all_outcome <- sigma_species_all_outcome / total_var_all_outcome * 100
 I2_study_all_outcome   <- sigma_study_all_outcome   / total_var_all_outcome * 100
 I2_exp_all_outcome    <- sigma_exp_all_outcome     / total_var_all_outcome * 100
-I2_total_all_outcome   <- (sigma_species_all_outcome + sigma_study_all_outcome + sigma_exp_all_outcome) / total_var_all_outcome * 100
+I2_total_all_outcome   <- (sigma_study_all_outcome + sigma_exp_all_outcome) / total_var_all_outcome * 100
 
-I2_species_all_outcome; I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
-
-
-
-
+I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
