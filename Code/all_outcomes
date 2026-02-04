@@ -1,90 +1,12 @@
-install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", 
-"meta", "metafor", "clubSandwich", "robumeta", "devtools", "MASS"))
 
-# Load necessary libraries
-library(dplyr)
-library(tidyr)
-library(tidyverse)
-library(rnaturalearth)  
-library(rnaturalearthdata)
-library(sf)              
-library(ggplot2)
-library(grid)
-library(patchwork)
-library(here)
-library(metafor)
-library(meta)
-library(clubSandwich)
-library(robumeta)
-library(MASS)
-
-#install.packages("pacman")
-rm(list = ls())
-devtools::install_github("daniel1noble/orchaRd", ref = "main", force = TRUE)
-pacman::p_load(devtools, tidyverse, metafor, patchwork, R.rsp, orchaRd, emmeans, ape, phytools, flextable)
 
 ###Please download GitHub repository and then run the following
 here()
-mydata <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "Ulva inclusion in Haliotis sp. diets_A Meta-analysis - Data"))
-head(mydata)
-
-#Add another column to assign short citation
-citations <- data.frame(
-  study_ID = c("S001", "S002", "S003", "S004", "S005", "S006", "S007", "S008","S009", "S010", "S011"),
-  short_citation = c(
-    "Bansemer et al. (2016)",
-    "Lange et al. (2014)",
-    "Stone et al. (2022)",
-    "Francis et al. (2021)",
-    "Mwangudza (2024)",
-    "Falade (2023)",
-    "Bates et al. (2017)",
-    "Chi et al. (2018)",
-    "Angell et al. (2012)",
-    "Searle et al. (2025)", 
-    "Duong et al. (2021)" 
-  ))
-
-mydata <- mydata %>%
-  left_join(citations, by = "study_ID")
-
-#Add long outcome names
-mydata <- mydata %>%
-  mutate(
-    outcome_long = case_when(
-      outcome == "FI"  ~ "Feed intake",
-      outcome == "BG"  ~ "Biomass gain",
-      outcome == "CF"  ~ "Condition factor",
-      outcome == "FW"  ~ "Final weight",
-      outcome == "FSL" ~ "Final shell length",
-      outcome == "SG"  ~ "Shell gain",
-      outcome == "SGR" ~ "Specific growth rate",
-      outcome == "WG"  ~ "Weight gain",
-      outcome == "EER" ~ "Energy efficiency ratio",
-      outcome == "ED"  ~ "Energy deposition",
-      outcome == "FCR" ~ "Feed conversion ratio",
-      outcome == "PER" ~ "Protein efficiency ratio",
-      outcome == "PD"  ~ "Protein deposition",
-      outcome == "LG"  ~ "Length gain",
-      outcome == "I" ~ "Ingested feed energy", 
-      outcome == "Pg" ~ "Somatic feed energy", 
-      outcome == "S" ~ "Shell growth energy",
-      TRUE ~ outcome
-    )
-  )
-
-#Arcsine transform proportional data (protein deposition and energy deposition)
-mydata <- mydata %>%
-  mutate(
-    arcsine_transformed = ifelse(
-      outcome %in% c("Protein deposition", "Energy deposition"),
-      asin(sqrt(treatment_mean / 100)),  
-      NA_real_
-    )
-  )
+clean_data <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "cleaned_data_for_meta_analysis"))
+head(clean_data)
 
 # Calculate effect size (lnRR) and variance
-all_data <- mydata %>%
+all_data <- clean_data %>%
   mutate(
     lnRR_all = log(treatment_mean / control_mean),
     vi_lnRR_all = (treatment_SD^2) / (treatment_n * treatment_mean^2) +
@@ -103,15 +25,11 @@ res_3L_all <- rma.mv(yi = lnRR_all, V = vi_lnRR_all,
 res_3L_all
 
 #Testing effect of species
-# Set species as a factor and H. laevigata as the reference (highest k)
-all_data$species <- factor(all_data$species)
-all_data$species <- relevel(all_data$species, ref = "H. laevigata")
-
-# MLMA with species as fixed effect
+# MLMA with species as fixed effect (no intercept)
 res_species_fixed <- rma.mv(
   yi   = lnRR_all,
   V    = vi_lnRR_all,
-  mods = ~ species,                    
+  mods = ~ 0 + species,                    
   random = ~ 1 | study_ID / ES_ID,  
   data = all_data,
   method = "REML"
@@ -147,35 +65,16 @@ total_var_all <- sigma_study_all + sigma_exp_all + mean_vi_all
 # I² calculations
 I2_study_all   <- sigma_study_all   / total_var_all * 100
 I2_exp_all    <- sigma_exp_all     / total_var_all * 100
-I2_total_all   <- (sigma_species_all + sigma_study_all + sigma_exp_all) / total_var_all * 100
+I2_total_all   <- (sigma_study_all + sigma_exp_all) / total_var_all * 100
 
 I2_study_all; I2_exp_all; I2_total_all
-
-#Plot orchard plot
-orchaRd::orchard_plot(
-    res_species_random,
-    mod = "1",
-    xlab = "Effect Size (Hedges g)",
-    group = "study_ID"
-) +
-  annotate(
-    geom = "text",
-    x = 0.7,
-    y = 10,
-    label = paste0("italic(I)^{2} == ", round(I2_total[1], 2), "*\"%\""),
-    color = "black",
-    parse = TRUE,
-    size = 5
-  ) +
-  scale_fill_manual(values = "grey") +
-  scale_colour_manual(values = "grey")
 
 #Publication bias
 # Compute SE, precision, and effective sample size for all_data
 all_data <- all_data %>%
   mutate(
-    se_g = sqrt(vi_lnRR_all),  
-    precision = 1 / se_g,                     
+    se_lnRR = sqrt(vi_lnRR_all),  
+    precision = 1 / se_lnRR,                     
     n_eff = (treatment_n * control_n) / (treatment_n + control_n),
     inv_n_eff = 1 / n_eff                  
   )
@@ -200,9 +99,6 @@ cr2_test_precision <- coef_test(
   test = "Satterthwaite"
 )
 print(cr2_test_precision)
-
-
-
 
 # Create funnel plot
 #Calculate SE
@@ -252,6 +148,8 @@ funnel_plot_all <- ggplot(all_data, aes(x = lnRR_all, y = precision)) +
     plot.title = element_text(face = "bold", hjust = 0.01, size = 18)
   ) +
   ggtitle("")
+
+funnel_plot_all
 
 ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")
 
