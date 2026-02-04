@@ -674,7 +674,11 @@ mydata <- mydata %>%
       ES_ID == "S004.27" ~ 99.0,
       TRUE ~ treatment_mean
     ),
-
+    # Fix incorrect control_mean
+    control_mean = case_when(
+      ES_ID == "S004.27" ~ 105.1,
+      TRUE ~ treatment_mean
+    ),
     #Fix incorrect treatment_SE
     treatment_SE = case_when(
       ES_ID == "S004.27" ~ 0.70,
