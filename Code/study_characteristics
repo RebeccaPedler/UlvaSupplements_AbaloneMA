@@ -519,6 +519,49 @@ mydata <- mydata %>%
 ## Two way table to match units to proportional_data:
 table(mydata$units, mydata$proportional_data) #FIX: %, %BW/day, g/100g BW/day, g/kg abalone/day - are any a true % = proportions (range 0-1)?
 
+#Arcsine transform proportional data (protein deposition and energy deposition)
+#Check data 
+mydata %>%
+  dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
+  dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
+
+#Convert data to proportions
+mydata <- mydata %>%
+  # Convert PD and ED means and SDs to proportions
+  mutate(
+    treatment_mean = treatment_mean / 100,
+    control_mean   = control_mean / 100,
+    treatment_SD   = treatment_SD / 100,
+    control_SD     = control_SD / 100
+  ) %>%
+  # Arcsine transform PD and ED values
+  mutate(
+    treatment_mean = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      asin(sqrt(treatment_mean)),
+      treatment_mean
+    ),
+    control_mean = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      asin(sqrt(control_mean)),
+      control_mean
+    ),
+    treatment_SD = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      sqrt((treatment_SD^2) / (4 * treatment_mean * (1 - treatment_mean))),
+      treatment_SD
+    ),
+    control_SD = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      sqrt((control_SD^2) / (4 * control_mean * (1 - control_mean))),
+      control_SD
+    )
+  )
+
+#Check data again to see if transformation successful
+mydata %>%
+  dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
+  dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
 # ## Summarise study design characteristics
 # vars_characteristics <- c("study_duration_days", "initial_size_g", "water_temperature")
@@ -529,8 +572,6 @@ table(mydata$units, mydata$proportional_data) #FIX: %, %BW/day, g/100g BW/day, g
 #   max = sapply(mydata[vars_characteristics], max, na.rm = TRUE)
 # )
 # summary_stats_characteristics
-
-
 
 ### Summarise and check values relevant for effect sizes
 
@@ -551,12 +592,9 @@ mydata <- mydata %>%
 ## Check again for any missing SEs:
 mydata %>%  filter(is.na(treatment_SE) | is.na(control_SE)) %>% dim()   # No missing SEs found now
 
-
-
 ## Check for any zero means or SDs that would cause issues with effect size calculations:
 mydata %>%  filter(treatment_mean == 0 | control_mean == 0) %>% dim() # No zero means found
 mydata %>%  filter(treatment_SD == 0 | control_SD == 0) %>% dim()   # 4 zero SDs found: S004.11, S004.22, S004.23, S004.35 - problematic for ES calculations
-
 
 ### CV
 # Note: Coefficient of Variation (CV = \(\sigma /\mu \)).
@@ -590,7 +628,6 @@ ggplot(mydata, aes(x = treatment_CV)) +
     y = "Frequency"
   ) +
   theme_minimal()
-
 
 ## Show rows with CV == 0:
 mydata %>% filter(treatment_CV == 0 | control_CV == 0) %>% View() # 4 rows with zero SDs (all S004, mostly arbitrary=y units) - CHECK MANUALLY! (and substitute)
@@ -689,9 +726,6 @@ mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # S001.1
 ### Save cleaned data for meta-analysis
 write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
 
-## TODO:
-#[] summarise study characteristics (some done above) - could be a table or a diagram/infographics
-
 ### End of script ###
 
-### NEXT ###: Use cleaned data from the output file *"cleaned_data_for_meta_analysis.csv"* to calculate effect sizes (lnRR and SMD). 
+### NEXT ###: Use cleaned data from the output file *"cleaned_data_for_meta_analysis.csv"* to calculate effect sizes (lnRR). 
