@@ -1,4 +1,6 @@
+# Project: Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
 
+## Step4: Running meta-analysis
 
 ###Please download GitHub repository and then run the following
 here()
@@ -181,3 +183,7 @@ I2_exp_all_outcome    <- sigma_exp_all_outcome     / total_var_all_outcome * 100
 I2_total_all_outcome   <- (sigma_study_all_outcome + sigma_exp_all_outcome) / total_var_all_outcome * 100
 
 I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
+
+#TO DO
+#Run MLMA for each outcome
+#Run MLMR for appropriate outcomes
