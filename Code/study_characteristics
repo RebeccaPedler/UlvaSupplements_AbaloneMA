@@ -67,9 +67,10 @@ mydata <- mydata %>%
       outcome == "PER" ~ "Protein efficiency ratio",
       outcome == "PD"  ~ "Protein deposition",
       outcome == "LG"  ~ "Length gain",
-      outcome == "I" ~ "Ingested feed energy", 
-      outcome == "Pg" ~ "Somatic feed energy", 
-      outcome == "S" ~ "Shell growth energy",
+      outcome == "I"   ~ "Ingested feed energy", 
+      outcome == "Pg"  ~ "Somatic feed energy", 
+      outcome == "S"   ~ "Shell growth energy",
+      outcome == "Ab"  ~ "Absorbed feed energy",
       TRUE ~ outcome
     )
   )
@@ -140,18 +141,45 @@ mydata <- mydata %>%
   mutate(outcome_category = ifelse(outcome_long == "Final weight", "growth performance", outcome_category)
   )
 
-
-## Count number of records per species–outcome combination
+## Create bubble plot of species vs outcome
+# Count number of records per species–outcome combination
 bubble_data <- mydata %>%
   group_by(species, outcome_long, outcome_category) %>%
   summarise(
-    count = n(),        # number of times each combo appears
+    count = n(),
     .groups = "drop"
   )
 
+# Explicitly order species factor levels
+species_order <- c(
+  "H. laevigata",
+  "H. laevigata x H. rubra",
+  "H. discus hannai",
+  "H. midae",  
+  "H. laevigata and H. laevigata x H. rubra",
+  "H. asinina"
+)
 
-## Build a bubble plot with y-axis ordered by total counts per outcome and x by species:
-bubble_plot_species <- ggplot(bubble_data, aes(x = fct_infreq(species), y = fct_rev(fct_infreq(outcome_long)) )) +
+bubble_data <- bubble_data %>%
+  mutate(
+    species = factor(species, levels = species_order)
+  )
+
+# Replace " x " and " and " with line breaks for multi-line labels
+bubble_data <- bubble_data %>%
+  mutate(
+    species_label = gsub(" x ", "\n x \n", species),
+    species_label = gsub(" and ", "\n and \n", species_label)
+  )
+
+# Build bubble plot
+bubble_plot_species <- ggplot(
+  bubble_data,
+  aes(
+    x = species,
+    y = fct_rev(fct_infreq(outcome_long))
+  )
+) +
   geom_point(
     aes(size = count, fill = outcome_category),
     shape = 21,
@@ -170,12 +198,13 @@ bubble_plot_species <- ggplot(bubble_data, aes(x = fct_infreq(species), y = fct_
       "feed behaviour" = "white"
     )
   ) +
+  scale_x_discrete(labels = function(x) bubble_data$species_label[match(x, bubble_data$species)]) +
   labs(
-    #title = "A",
     x = "Species",
     y = "Outcome",
     size = "Number of Observations",
-    fill = "Outcome Category"
+    fill = "Outcome Category",
+    title = "A"
   ) +
   guides(
     size = guide_legend(override.aes = list(size = 8)),
@@ -183,9 +212,15 @@ bubble_plot_species <- ggplot(bubble_data, aes(x = fct_infreq(species), y = fct_
   ) +
   theme_minimal(base_size = 14) +
   theme(
-    axis.text.x = element_text(hjust = 1, face = "italic", angle = 45),
+    axis.text.x = element_text(
+      angle = 0,        
+      hjust = 0.5,            
+      vjust = 1,       
+      face = "italic",
+      margin = margin(t = 10)  
+    ),
     axis.text.y = element_text(size = 10),
-    plot.title = element_text(face = "bold", hjust = 0.05),
+    plot.title = element_text(face = "bold", vjust = 0.5),
     panel.grid.major = element_line(color = "grey85"),
     panel.grid.minor = element_blank(),
     axis.ticks.length = unit(0.25, "cm"),
@@ -198,7 +233,8 @@ bubble_plot_species <- ggplot(bubble_data, aes(x = fct_infreq(species), y = fct_
 
 ## Show the plot:
 bubble_plot_species
-
+#Save plot
+ggsave("bubble_plot_species.png", width = 12, height = 9, units = "in")
 
 ## Recode country names to match rnaturalearth conventions
 mydata <- mydata %>%
@@ -230,8 +266,7 @@ print(country_summary)
 
 ## Get world map shapefile for plotting and remove Antarctica:
 world <- ne_countries(scale = "medium", returnclass = "sf")
-world <- world %>% filter(name != "Antarctica") #remove the continent from the spatial object for cleaner mapping
-
+world <- world %>% filter(name != "Antarctica") 
 ## Join country summary with world shapefile:
 world_data <- world %>%
   left_join(country_summary, by = "name")
@@ -243,25 +278,26 @@ world_map <- ggplot(world_data) +
     low = "#deebf7",
     high = "#08306b",
     na.value = "grey90",
-    name = "Number of\nComparisons"   # line break in legend title
+    name = "Number of\nComparisons"   
   ) +
   labs(
-    #title = "B",
+    title = "B",
     caption = "Grey areas = no studies"
   ) +
   theme_minimal() +
   theme(
-    legend.position = "right",
-    legend.title = element_text(face = "bold"),
+    legend.position = "bottom",
+    legend.title.align = 0,
+    legend.title = element_text(face = "bold", margin = margin(r = 10)),
     plot.title = element_text(face = "bold"),
     plot.subtitle = element_text(face = "italic"),
-    panel.grid = element_blank()           # remove all gridlines
-  )   +
-  theme(legend.position = "bottom") #+ # Move legend to bottom
+    panel.grid = element_blank()           
+  )
 
 ## Display the plot:
 world_map
-
+#Save map
+ggsave("world_map.png", width = 10, height = 5, units = "in")
 
 # # Combine side by side with one shared legend = NOT YET (also it should be vertical not horizontal)
 # species_and_map_combined <- bubble_plot_species + world_map +
@@ -363,6 +399,11 @@ table(mydata$experimental_system, mydata$outcome_category)
 table(mydata$experimental_unit, mydata$outcome_category)
 
 ###Create Sankey plot to investigate moderator overlap and/or potential collinearity 
+
+#The Sankey plot was generated using functions from Yang Y, Lagisz M, Nakagawa S. Visualization toolkits for enriching meta-analyses through evidence maps, bibliometrics, 
+and alternative impact metrics. Res Synth Methods. 2025;16(1). doi:10.1017/rsm.2024.3
+#Please go to github.com/Yefeng0920/MA_Map_Bib and run the custom.R script in folder, "Function".
+
 ##Create bins for continious numerical data and order ascending
 mydata_alluvial <- mydata %>%
   mutate(
@@ -456,7 +497,8 @@ sankey_long <- sankey_long %>%
     next_node = factor(next_node, levels = node_levels)
   )
 
-ggplot(
+#Create plot
+sankey_plot <- ggplot(
   sankey_long,
   aes(
     x = x,
@@ -489,6 +531,8 @@ ggplot(
     position = "top"
   )
 
+#View plot 
+sankey_plot
 #Save plot
 ggsave("Sankey_plot.png", width = 20, height = 10, units = "in")
 
@@ -518,50 +562,6 @@ mydata <- mydata %>%
 
 ## Two way table to match units to proportional_data:
 table(mydata$units, mydata$proportional_data) #FIX: %, %BW/day, g/100g BW/day, g/kg abalone/day - are any a true % = proportions (range 0-1)?
-
-#Arcsine transform proportional data (protein deposition and energy deposition)
-#Check data 
-mydata %>%
-  dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
-  dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
-
-#Convert data to proportions
-mydata <- mydata %>%
-  # Convert PD and ED means and SDs to proportions
-  mutate(
-    treatment_mean = treatment_mean / 100,
-    control_mean   = control_mean / 100,
-    treatment_SD   = treatment_SD / 100,
-    control_SD     = control_SD / 100
-  ) %>%
-  # Arcsine transform PD and ED values
-  mutate(
-    treatment_mean = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      asin(sqrt(treatment_mean)),
-      treatment_mean
-    ),
-    control_mean = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      asin(sqrt(control_mean)),
-      control_mean
-    ),
-    treatment_SD = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      sqrt((treatment_SD^2) / (4 * treatment_mean * (1 - treatment_mean))),
-      treatment_SD
-    ),
-    control_SD = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      sqrt((control_SD^2) / (4 * control_mean * (1 - control_mean))),
-      control_SD
-    )
-  )
-
-#Check data again to see if transformation successful
-mydata %>%
-  dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
-  dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
 # ## Summarise study design characteristics
 # vars_characteristics <- c("study_duration_days", "initial_size_g", "water_temperature")
@@ -596,6 +596,8 @@ mydata %>%  filter(is.na(treatment_SE) | is.na(control_SE)) %>% dim()   # No mis
 mydata %>%  filter(treatment_mean == 0 | control_mean == 0) %>% dim() # No zero means found
 mydata %>%  filter(treatment_SD == 0 | control_SD == 0) %>% dim()   # 4 zero SDs found: S004.11, S004.22, S004.23, S004.35 - problematic for ES calculations
 
+#Calculate 
+
 ### CV
 # Note: Coefficient of Variation (CV = \(\sigma /\mu \)).
 # Bbiological data usually display a CV between 0.05 (5%) and 0.5 (50%), so need to check for atypical values
@@ -610,7 +612,7 @@ mydata <- mydata %>%
 range(mydata$control_CV)
 range(mydata$treatment_CV)
 
-## make hjostograms of CV:
+## make histograms of CV:
 ggplot(mydata, aes(x = control_CV)) +
   geom_histogram(binwidth = 0.01, fill = "steelblue", color = "black") +
   labs(
@@ -642,6 +644,18 @@ mydata <- mydata %>%
     control_SE = ifelse(control_SE == 0, 0.01, control_SE)
   )
 
+#Recalculate CV and rerun checks 
+mydata <- mydata %>%
+  mutate(control_CV = control_SD / control_mean) %>%
+  mutate(treatment_CV = treatment_SD / treatment_mean)
+
+## get the ranges of CV:
+range(mydata$control_CV)
+range(mydata$treatment_CV)
+
+## Show rows with CV == 0:
+mydata %>% filter(treatment_CV == 0 | control_CV == 0) %>% View() # 4 rows with zero SDs (all S004, mostly arbitrary=y units) - CHECK MANUALLY! (and substitute)
+
 ## Show rows with CV < 0.005 (141 has <0.05):
 mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # 14 rows with low SDs (including 4 with 0) - CHECK MANUALLY and fix SDs, SEs here using R code, if needed!
 
@@ -649,7 +663,7 @@ mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # 14 row
 mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows with high SDs - CHECK MANUALLY and fix SDs, SEs here using R code,  if needed!
 
 #ES_ID where CV > 0.5 manually checked in original publication
-#S003.3, S006.3, S011.10, S011.11, S012.12, S002.13, S002.14 checked in article - true reported value
+#S006.3, S011.10, S011.11, S012.12, S002.13, S002.14 checked in article - true reported value
 
 #ES_ID where CV < 0.005 manually checked in original publication
 # S001.6, S004.11, S004.23, S004.35, S006.23, S006.26 - true reported value
@@ -674,11 +688,7 @@ mydata <- mydata %>%
       ES_ID == "S004.27" ~ 99.0,
       TRUE ~ treatment_mean
     ),
-    # Fix incorrect control_mean
-    control_mean = case_when(
-      ES_ID == "S004.27" ~ 105.1,
-      TRUE ~ treatment_mean
-    ),
+
     #Fix incorrect treatment_SE
     treatment_SE = case_when(
       ES_ID == "S004.27" ~ 0.70,
@@ -726,9 +736,53 @@ mydata <- mydata %>%
 ##Now reperform CV < 0.005 checks
 ## Show rows with CV < 0.005:
 mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # S001.18, S004.22, S004.27 still < 0.005 despite ammending
-  
+
+#Arcsine transform proportional data (protein deposition and energy deposition)
+#Check data 
+mydata %>%
+  dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
+  dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
+
+#Convert data to proportions
+mydata <- mydata %>%
+  mutate(
+    treatment_mean = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                             treatment_mean / 100, treatment_mean),
+    control_mean   = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                             control_mean / 100, control_mean),
+    treatment_SD   = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                             treatment_SD / 100, treatment_SD),
+    control_SD     = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                             control_SD / 100, control_SD)
+  )
+
+#Arcsine transform
+mydata <- mydata %>%
+   mutate(
+    control_mean = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      asin(sqrt(control_mean)),
+      control_mean
+    ),
+    treatment_SD = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      sqrt((treatment_SD^2) / (4 * treatment_mean * (1 - treatment_mean))),
+      treatment_SD
+    ),
+    control_SD = ifelse(
+      outcome_long %in% c("Protein deposition", "Energy deposition"),
+      sqrt((control_SD^2) / (4 * control_mean * (1 - control_mean))),
+      control_SD
+    )
+  )
+
+#Check data again to see if transformation successful
+mydata %>%
+  dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
+  dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
+
 ### Save cleaned data for meta-analysis
-write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
+write_csv(mydata, "cleaned_data_for_meta_analysis.csv")
 
 ### End of script ###
 
