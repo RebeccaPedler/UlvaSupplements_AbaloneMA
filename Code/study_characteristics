@@ -86,6 +86,9 @@ length(unique(mydata$study_ID)) #11
 mydata <- mydata %>%
   rename(ES_ID = experiment_ID)
 
+#Number of ES_ID
+length(unique(mydata$ES_ID))
+
 ## Number of ES_ID (observations) per study
 mydata %>%
   group_by(study_ID) %>%
@@ -105,6 +108,14 @@ mydata %>%
   group_by(outcome_long) %>%
   summarise(
     count = n(),      
+    .groups = "drop"
+  )
+
+## Count number of unique study_ID (observations) per outcome category
+mydata %>%
+  group_by(outcome_category) %>%
+  summarise(
+    n_studies = n_distinct(study_ID),        
     .groups = "drop"
   )
 
