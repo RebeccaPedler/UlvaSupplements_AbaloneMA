@@ -8,58 +8,53 @@ clean_data <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "clea
 head(clean_data)
 
 # Calculate effect size (lnRR) and variance
-all_data <- clean_data %>%
+clean_data <- clean_data %>%
   mutate(
-    lnRR_all = log(treatment_mean / control_mean),
-    vi_lnRR_all = (treatment_SD^2) / (treatment_n * treatment_mean^2) +
+    lnRR = log(treatment_mean / control_mean),
+    vi_lnRR = (treatment_SD^2) / (treatment_n * treatment_mean^2) +
               (control_SD^2) / (control_n * control_mean^2)
   )
 
 #Reverse the sign of FCR effect size
-all_data <- all_data %>%
-  mutate(lnRR_all = ifelse(outcome == "FCR", -lnRR_all, lnRR_all))
+clean_data <- clean_data %>%
+  mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
+
+#Check distribution of effect sizes
+hist(clean_data$lnRR, breaks = 30)   #Effect sizes
+#Check two high lnRR
+clean_data %>%
+  arrange(desc(abs(lnRR))) %>%
+  dplyr::select(ES_ID, short_citation, treatment_name, outcome_long,
+         treatment_mean, control_mean,
+         treatment_SD, control_SD,
+         treatment_n, control_n,
+         lnRR, vi_lnRR) %>%
+  head(10)
+
+hist(clean_data$vi_lnRR, breaks = 30)  #Variances
+#Check six high vi_lnRR
+clean_data %>%
+  arrange(desc(vi_lnRR)) %>%
+  dplyr::select(ES_ID, short_citation, outcome,
+         treatment_mean, control_mean,
+         treatment_SD, control_SD,
+         treatment_n, control_n,
+         lnRR, vi_lnRR) %>%
+  head(10) #Flag S011.10, S011.11, S011.12, S002.9, S002.13, S002.14 for sensitivity analysis
 
 # Run 3-level meta-analysis
-res_3L_all <- rma.mv(yi = lnRR_all, V = vi_lnRR_all,
+res_3L_all <- rma.mv(yi = lnRR, V = vi_lnRR,
                      random = ~ 1 | study_ID / ES_ID,
-                     data = all_data,
+                     data = clean_data,
                      method = "REML")
 res_3L_all
-
-#Testing effect of species
-# MLMA with species as fixed effect (no intercept)
-res_species_fixed <- rma.mv(
-  yi   = lnRR_all,
-  V    = vi_lnRR_all,
-  mods = ~ 0 + species,                    
-  random = ~ 1 | study_ID / ES_ID,  
-  data = all_data,
-  method = "REML"
-)
-summary(res_species_fixed)
-
-# MLMA with species as random effect
-res_species_random <- rma.mv(
-yi   = lnRR_all,
-V    = vi_lnRR_all,
-  random = list(
-    ~ 1 | species,                  
-    ~ 1 | study_ID / ES_ID 
-  ),
-  data = all_data,
-  method = "REML"
-)
-summary(res_species_random)
-
-# Compare models
-anova(res_3L_all, res_species_random)
 
 # Extract variance components
 sigma_study_all   <- res_3L_all$sigma2[1]
 sigma_exp_all    <- res_3L_all$sigma2[2]
 
 # Mean sampling variance
-mean_vi_all <- mean(all_data$vi_lnRR_all)
+mean_vi_all <- mean(clean_data$vi_lnRR)
 
 # Total variance
 total_var_all <- sigma_study_all + sigma_exp_all + mean_vi_all
@@ -71,11 +66,65 @@ I2_total_all   <- (sigma_study_all + sigma_exp_all) / total_var_all * 100
 
 I2_study_all; I2_exp_all; I2_total_all
 
-#Publication bias
+##Orchard Plot 
+all_data_plot <- orchaRd::orchard_plot(
+  res_3L_all,
+  mod = "1",
+  xlab = "Effect Size (lnRR)",
+  group = "study_ID"
+) +
+  annotate(
+    geom = "text",
+    x = 0.7,
+    y = 12,
+    label = paste0("italic(I)^{2} == ", round(I2_total_all[1], 2), "*\"%\""),
+    color = "black",
+    parse = TRUE,
+    size = 3
+  ) +
+  ggtitle("A) All Outcome Categories") +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_fill_manual(values = "grey") +
+  scale_colour_manual(values = "grey")
+
+all_data_plot   #Print orchard plot
+ggsave("all_data_orchard_plot.png", width = 15, height = 10, units = "in")     #Save orchard plot
+
+##Testing effect of species
+# MLMA with species as fixed effect (no intercept)
+res_species_fixed <- rma.mv(
+  yi   = lnRR,
+  V    = vi_lnRR,
+  mods = ~ 0 + species,                    
+  random = ~ 1 | study_ID / ES_ID,  
+  data = clean_data,
+  method = "REML"
+)
+summary(res_species_fixed)
+
+# MLMA with species as random effect
+res_species_random <- rma.mv(
+yi   = lnRR,
+V    = vi_lnRR,
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / ES_ID 
+  ),
+  data = clean_data,
+  method = "REML"
+)
+summary(res_species_random)
+
+# Compare models
+anova(res_3L_all, res_species_random)
+
+####Adding species as a random effect does not improve model fit. Continue without?
+
+##Publication bias
 # Compute SE, precision, and effective sample size for all_data
-all_data <- all_data %>%
+clean_data <- clean_data %>%
   mutate(
-    se_lnRR = sqrt(vi_lnRR_all),  
+    se_lnRR = sqrt(vi_lnRR),  
     precision = 1 / se_lnRR,                     
     n_eff = (treatment_n * control_n) / (treatment_n + control_n),
     inv_n_eff = 1 / n_eff                  
@@ -83,13 +132,13 @@ all_data <- all_data %>%
 
 # Fit three-level MLMA with precision as moderator
 res_bias_precision_all <- rma.mv(
-  yi   = lnRR_all,
-  V    = vi_lnRR_all,
+  yi   = lnRR,
+  V    = vi_lnRR,
   mods = ~ precision,                       
   random = list(                  
     ~ 1 | study_ID / ES_ID 
   ), 
-  data = all_data,
+  data = clean_data,
   method = "REML")
 summary(res_bias_precision_all)
 
@@ -97,21 +146,21 @@ summary(res_bias_precision_all)
 cr2_test_precision <- coef_test(
   res_bias_precision_all,
   vcov = "CR2",
-  cluster = all_data$study_ID,
+  cluster = clean_data$study_ID,
   test = "Satterthwaite"
 )
 print(cr2_test_precision)
 
 # Create funnel plot
 #Calculate SE
-all_data <- all_data %>%
+clean_data <- clean_data %>%
   mutate(SE = 1 / precision)
 
 # Create a grid of precision values for plotting the funnel
-precision_grid <- seq(min(all_data$precision), max(all_data$precision), length.out = 100)
+precision_grid <- seq(min(clean_data$precision), max(clean_data$precision), length.out = 100)
 
 # Pooled effect (mean lnRR)
-mean_lnRR <- mean(all_data$lnRR_all, na.rm = TRUE)
+mean_lnRR <- mean(clean_data$lnRR, na.rm = TRUE)
 
 # Upper and lower bounds
 bounds <- data.frame(
@@ -122,7 +171,7 @@ bounds <- data.frame(
 str(bounds)
 
 #Create plot
-funnel_plot_all <- ggplot(all_data, aes(x = lnRR_all, y = precision)) +
+funnel_plot_all <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
   geom_ribbon(
     data = bounds,
     aes(y = precision, xmin = lnRR_lower, xmax = lnRR_upper),
@@ -153,16 +202,15 @@ funnel_plot_all <- ggplot(all_data, aes(x = lnRR_all, y = precision)) +
   ) +
   ggtitle("")
 
-funnel_plot_all
-
-ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")
+funnel_plot_all    #Print funnel plot
+ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")   #Save funnel plot
 
 #Run MLMR with outcome_category as a moderator (no intercept)
-res_meta_reg <- rma.mv(yi = lnRR_all, V  = vi_lnRR_all,
+res_meta_reg <- rma.mv(yi = lnRR, V  = vi_lnRR,
   mods = ~ 0 + outcome_category,        
   random = list(                
     ~ 1 | study_ID / ES_ID),
-  data = all_data,
+  data = clean_data,
   method = "REML"
 )
 res_meta_reg
@@ -172,7 +220,7 @@ sigma_study_all_outcome   <- res_meta_reg$sigma2[1]
 sigma_exp_all_outcome    <- res_meta_reg$sigma2[2]
 
 # Mean sampling variance
-mean_vi_all <- mean(all_data$vi_lnRR_all)
+mean_vi_all <- mean(clean_data$vi_lnRR)
 
 # Total variance
 total_var_all_outcome <- sigma_study_all_outcome + sigma_exp_all_outcome + mean_vi_all
@@ -184,6 +232,64 @@ I2_total_all_outcome   <- (sigma_study_all_outcome + sigma_exp_all_outcome) / to
 
 I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
 
-#TO DO
-#Run MLMA for each outcome
-#Run MLMR for each outcome using appropriate moderators as fixed effects
+###Feed behaviour
+# Filter for feed behaviour
+feed_data <- clean_data %>%
+  filter(outcome_category == "feed behaviour")
+
+#Sanity check
+feed_data %>%
+  summarise(
+    n_ES_ID       = n_distinct(ES_ID),
+    n_study_ID    = n_distinct(study_ID),
+  )
+
+# Run 3-level meta-analysis
+res_feed <- rma.mv(yi = lnRR, V = vi_lnRR,
+                     random = ~ 1 | study_ID / ES_ID,
+                     data = feed_data,
+                     method = "REML")
+res_feed
+
+
+##WIP
+###Growth performance
+# Filter for growth performance
+growth_data <- clean_data %>%
+  filter(outcome_category == "growth performance")
+
+#Sanity check
+growth_data %>%
+  summarise(
+    n_ES_ID       = n_distinct(ES_ID),
+    n_study_ID    = n_distinct(study_ID),
+  )
+
+# Run 3-level meta-analysis
+res_growth <- rma.mv(yi = lnRR, V = vi_lnRR,
+                     random = ~ 1 | study_ID / ES_ID,
+                     data = growth_data,
+                     method = "REML")
+res_growth
+
+
+##WIP
+###Nutrient utilisation
+# Filter for nutrient utilisation
+nutrient_data <- clean_data %>%
+  filter(outcome_category == "nutrient utilisation")
+
+#Sanity check
+nutrient_data %>%
+  summarise(
+    n_ES_ID       = n_distinct(ES_ID),
+    n_study_ID    = n_distinct(study_ID),
+  )
+
+# Run 3-level meta-analysis
+res_nutrient <- rma.mv(yi = lnRR, V = vi_lnRR,
+                     random = ~ 1 | study_ID / ES_ID,
+                     data = nutrient_data,
+                     method = "REML")
+res_nutrient
+
