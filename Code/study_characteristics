@@ -330,6 +330,69 @@ publication_summary <- mydata %>%
   )
 print(publication_summary)
 
+##Create bubble plot of publication type-year
+#Summarise number of unique studies per publication-year combo
+bubble_data_publication <- clean_data %>%
+  distinct(study_ID, journal, publication_year, publication_type) %>%
+  group_by(journal, publication_year, publication_type) %>%
+  summarise(unique_study_count = n(), .groups = "drop")
+
+#Change journal names to shortened versions
+bubble_data_publication <- bubble_data_publication %>%
+  mutate(
+    journal = recode(
+      journal,
+      "Journal of Shellfish Research" = "J Shellfish Res",
+      "Journal of Applied Phycology" = "J Appl Phycol"
+    )
+  )
+
+# Plot
+journal_year <- ggplot(
+  bubble_data_publication,
+  aes(
+    y = journal,
+    x = as.factor(publication_year)
+  )
+  ) +
+  geom_point(
+    aes(
+      size = unique_study_count,
+      colour = publication_type
+    ),
+    alpha = 0.7
+    ) +
+    scale_colour_manual(
+    values = c(
+      "Primary literature"   = "steelblue",
+      "Grey literature" = "grey60"
+    )
+  ) +
+  scale_size_continuous(range = c(3, 15)) +
+  guides(size = "none") + 
+  scale_x_discrete(limits = as.character(2011:2025)) +
+  labs(
+    y = "Journal",
+    x = "Publication year",
+    colour = "Publication type"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.title = element_text(size = 14),
+    legend.text  = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"),
+    axis.ticks = element_line(color = "black", size = 0.3),
+    axis.ticks.length = unit(0.2, "cm"),
+    panel.background = element_blank()
+  )
+
+journal_year  #Print plot
+setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah")
+ggsave("journal_year.png", width = 13, height = 11, units = "in")   #Save bubble plot
 
 ### Check study validity metrics (study-level variables)
 
