@@ -161,7 +161,6 @@ all_data_plot <- orchaRd::orchard_plot(
   scale_colour_manual(values = "grey")
 
 all_data_plot   #Print orchard plot
-setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah")
 ggsave("all_data_orchard_plot.png", width = 15, height = 10, units = "in")     #Save orchard plot
 
 ##Testing effect of species
