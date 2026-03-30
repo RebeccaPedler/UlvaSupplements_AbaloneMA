@@ -1,0 +1,557 @@
+# Project: Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
+
+## Step4: Running meta-analysis
+
+###Please download GitHub repository and then run the following
+here()
+clean_data <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "cleaned_data_for_meta_analysis"))
+head(clean_data)
+
+# Calculate effect size (lnRR) and variance
+clean_data <- clean_data %>%
+  mutate(
+    lnRR = log(treatment_mean / control_mean),
+    vi_lnRR = (treatment_SD^2) / (treatment_n * treatment_mean^2) +
+              (control_SD^2) / (control_n * control_mean^2)
+  )
+
+#Reverse the sign of FCR effect size (negative result indicates positive biological improvement)
+clean_data <- clean_data %>%
+  mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
+
+#Check distribution of effect sizes overall and for each outcome category
+lnRR_feed <- clean_data %>% filter(outcome_category == "feed behaviour")
+lnRR_growth <- clean_data %>% filter(clean_data$outcome_category == "growth performance")
+lnRR_nutrient <- clean_data %>% filter(clean_data$outcome_category == "nutrient utilisation")
+
+#Create histograms
+hist(clean_data$lnRR, breaks = 30, main = "all data")  
+hist(lnRR_feed$lnRR, breaks = 30, main = "Feed behaviour")  
+hist(lnRR_growth$lnRR, breaks = 30, main = "Growth performance")  
+hist(lnRR_nutrient$lnRR, breaks = 30, main = "Nutrient utilisation") 
+
+#Check highly negative effect sizes
+clean_data %>%
+  arrange(desc(abs(lnRR))) %>%
+  dplyr::select(ES_ID, short_citation, treatment_name, outcome_long,
+         treatment_mean, control_mean,
+         treatment_SD, control_SD,
+         treatment_n, control_n,
+         lnRR, vi_lnRR) %>%
+  head(5)  #Flag S004.12, S004.13, S004.4, S001.30 and S004.5 for sensitivity analysis
+
+#Check distribution of variances overall and for each outcome category
+vi_lnRR_feed <- clean_data %>% filter(outcome_category == "feed behaviour")
+vi_lnRR_growth <- clean_data %>% filter(clean_data$outcome_category == "growth performance")
+vi_lnRR_nutrient <- clean_data %>% filter(clean_data$outcome_category == "nutrient utilisation")
+
+#Create histograms
+hist(clean_data$vi_lnRR, breaks = 30, main = "all data")  
+hist(vi_lnRR_feed$vi_lnRR, breaks = 30, main = "Feed behaviour")  
+hist(vi_lnRR_growth$vi_lnRR, breaks = 30, main = "Growth performance")  
+hist(vi_lnRR_nutrient$vi_lnRR, breaks = 30, main = "Nutrient utilisation") 
+
+#Check very low vi_lnRR
+clean_data %>%
+  arrange(vi_lnRR) %>%
+  dplyr::select(ES_ID, short_citation, outcome,
+         treatment_mean, control_mean,
+         treatment_SD, control_SD,
+         treatment_n, control_n,
+         lnRR, vi_lnRR) %>%
+  head(5) #Flag S004.11, S001.18, S006.23, S006.26, S008.3 for sensitivity analysis
+
+#Many ES_ID compare to the same control (e.g., S001 compares three different Ulva doses to the same 0% control)
+#Calculate variance covariance (VCV) matrix to account for this
+VCV <- vcalc(
+  vi = vi_lnRR,
+  cluster = cohort_ID,
+  obs = ES_ID,
+  rho = 0.5,
+  data = clean_data
+)
+
+##Run meta-analysis
+# All data
+res_3L_all <- rma.mv(yi = lnRR, V = VCV,
+                     random = ~ 1 | study_ID / ES_ID,
+                     data = clean_data,
+                     method = "REML")
+res_3L_all
+
+#Check VCV
+dim(res_3L_all$V)           # should be n x n
+is.matrix(res_3L_all$V)     # should return TRUE
+str(res_3L_all$V)
+
+# Extract variance components from res_3L_all
+sigma_study_all   <- res_3L_all$sigma2[1]
+sigma_exp_all     <- res_3L_all$sigma2[2]
+
+# Mean sampling variance
+mean_vi_all <- mean(clean_data$vi_lnRR)
+
+# Total variance
+total_var_all <- sigma_study_all + sigma_exp_all + mean_vi_all
+
+# I² calculations
+I2_study_all   <- sigma_study_all   / total_var_all * 100
+I2_exp_all     <- sigma_exp_all     / total_var_all * 100
+I2_total_all   <- (sigma_study_all + sigma_exp_all) / total_var_all * 100
+
+I2_study_all; I2_exp_all; I2_total_all
+
+## Orchard Plot 
+all_data_plot <- orchaRd::orchard_plot(
+  res_3L_all,
+  mod = "1",
+  xlab = "Effect Size (lnRR)",
+  group = "study_ID"   
+) +
+  annotate(
+    geom = "text",
+    x = 0.7,
+    y = 1.5,
+    label = paste0("italic(I)^{2} == ", round(I2_total_all[1], 2), "*\"%\""),
+    color = "black",
+    parse = TRUE,
+    size = 3
+) +
+  ggtitle("A) All Outcome Categories") +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_fill_manual(values = "grey") +
+  scale_colour_manual(values = "grey") +
+  scale_y_continuous(limits = c(-2.5, 2.5))
+
+all_data_plot   # Print orchard plot
+ggsave("all_data_orchard_plot.png", width = 15, height = 10, units = "in")  # Save orchard plot
+
+##Testing effect of species
+# MLMA with species as fixed effect (no intercept)
+res_species_fixed <- rma.mv(
+  yi   = lnRR,
+  V    = VCV,
+  mods = ~ 0 + species,                    
+  random = ~ 1 | study_ID / ES_ID,  
+  data = clean_data,
+  method = "REML"
+)
+summary(res_species_fixed)
+
+# MLMA with species as random effect
+res_species_random <- rma.mv(
+yi   = lnRR,
+V    = VCV,
+  random = list(
+    ~ 1 | species,                  
+    ~ 1 | study_ID / ES_ID 
+  ),
+  data = clean_data,
+  method = "REML"
+)
+summary(res_species_random)
+
+# Compare models
+anova(res_3L_all, res_species_random)
+
+####Adding species as a random effect does not improve model fit. Continue without?
+
+##Testing if outcome is a significant moderator
+res_outcome_fixed <- rma.mv(
+  yi   = lnRR,
+  V    = VCV,
+  mods = ~ 0 + outcome_category,                    
+  random = ~ 1 | study_ID / ES_ID,  
+  data = clean_data,
+  method = "REML"
+)
+summary(res_outcome_fixed)
+
+## Publication bias
+# Compute SE, precision, and effective sample size for all_data
+clean_data <- clean_data %>%
+  mutate(
+    se_lnRR = sqrt(vi_lnRR),  
+    precision = 1 / se_lnRR,                     
+    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
+    inv_n_eff = 1 / n_eff                  
+  )
+
+# Fit three-level MLMA with precision as moderator
+res_bias_precision_all <- rma.mv(
+  yi   = lnRR,
+  V    = vi_lnRR,
+  mods = ~ precision,                       
+  random = list(                  
+    ~ 1 | study_ID / ES_ID 
+  ), 
+  data = clean_data,
+  method = "REML"
+)
+summary(res_bias_precision_all)
+
+# Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
+cr2_test_precision <- coef_test(
+  res_bias_precision_all,
+  vcov = "CR2",
+  cluster = clean_data$study_ID,
+  test = "Satterthwaite"
+)
+print(cr2_test_precision)
+
+# Create funnel plot
+# Calculate SE
+clean_data <- clean_data %>%
+  mutate(SE = 1 / precision)
+
+# Create a grid of precision values for plotting the funnel
+precision_grid <- seq(min(clean_data$precision), max(clean_data$precision), length.out = 100)
+
+# Pooled effect (mean lnRR)
+mean_lnRR <- mean(clean_data$lnRR, na.rm = TRUE)
+
+# Upper and lower bounds
+bounds <- data.frame(
+  precision = precision_grid,
+  lnRR_upper = mean_lnRR + 1.96 / precision_grid,
+  lnRR_lower = mean_lnRR - 1.96 / precision_grid
+)
+str(bounds)
+
+# Create plot
+funnel_plot_all <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
+  geom_ribbon(
+    data = bounds,
+    aes(y = precision, xmin = lnRR_lower, xmax = lnRR_upper),
+    fill = "white",
+    colour = "black",
+    linetype = "dotted",
+    size = 0.5,
+    inherit.aes = FALSE
+  ) +
+  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +
+  scale_y_continuous(name = "Precision (1/SE)", limits = c(0, 400)) +
+  scale_x_continuous(name = "Effect Size (lnRR)", limits = c(-2.0, 2.0),
+                     breaks = seq(-5, 5, by = 0.5)) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(color = "white", size = 0.5),
+    panel.grid.minor.y = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 16),
+    plot.title = element_text(face = "bold", hjust = 0.01, size = 18)
+  ) +
+  ggtitle("")
+
+funnel_plot_all    # Print funnel plot
+ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")  # Save funnel plot
+
+###Sensitivity analysis
+
+##"Leave one out" method (using vi_lnRR)
+study_list <- unique(clean_data$study_ID)
+sensitivity_results_vi_lnRR <- lapply(study_list, function(S){
+  dat_sub <- subset(clean_data, study_ID != S)
+  res_sub <- rma.mv(lnRR, vi_lnRR, random = ~1 | study_ID/ES_ID, data = dat_sub)
+#Create table
+  data.frame(
+    study_removed = S,
+    est = res_sub$beta,
+    se = res_sub$se,
+    tau2_study = res_sub$sigma2[1],
+    tau2_ES = res_sub$sigma2[2],
+    pct_change = (100 * (res_sub$beta - res_3L_all$beta) / res_3L_all$beta)
+  )
+})  %>%
+  bind_rows()
+
+print(sensitivity_results_vi_lnRR) #Print sensitivity analysis results
+
+# Leave-one-out sensitivity analysis with VCV subsetting
+study_list <- unique(clean_data$study_ID)
+
+sensitivity_results_VCV <- lapply(study_list, function(S) {
+  
+  # Subset data excluding study S
+  dat_sub <- subset(clean_data, study_ID != S)
+  
+  # Identify rows/effects to keep in the VCV
+  keep_idx <- which(clean_data$study_ID != S)
+  
+  # Subset the VCV matrix accordingly
+  V_sub <- VCV[keep_idx, keep_idx]
+  
+  # Re-run the meta-analysis with the subsetted VCV
+  res_sub <- rma.mv(
+    yi = lnRR,
+    V  = V_sub,
+    random = ~1 | study_ID / ES_ID,
+    data = dat_sub,
+    method = "REML"
+  )
+  
+  # Create summary table
+  data.frame(
+    study_removed = S,
+    est = res_sub$beta,
+    se = res_sub$se,
+    tau2_study = res_sub$sigma2[1],
+    tau2_ES = res_sub$sigma2[2],
+    pct_change = (100 * (res_sub$beta - res_3L_all$beta) / res_3L_all$beta)
+  )
+  
+}) %>% bind_rows()
+
+print(sensitivity_results_VCV) #Print sensitivity analysis results
+
+#Recreate funnel plot with S004 highlighted and inspect
+funnel_plot_S004 <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
+
+  geom_ribbon(
+    data = bounds,
+    aes(y = precision, xmin = lnRR_lower, xmax = lnRR_upper),
+    fill = "white",
+    colour = "black",
+    linetype = "dotted",
+    linewidth = 0.5,
+    inherit.aes = FALSE
+  ) +
+
+  geom_point(aes(fill = ifelse(study_ID == "S004", "red", "grey")),
+             shape = 21,
+             color = "black",
+             size = 3) +
+
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", linewidth = 1) +
+
+  scale_fill_identity() +
+
+  scale_y_continuous(name = "Precision (1/SE)", limits = c(0, 400)) +
+  scale_x_continuous(name = "Effect Size (lnRR)", limits = c(-2.0, 2.0),
+                     breaks = seq(-5, 5, by = 0.5)) +
+
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(color = "white", linewidth = 0.5),
+    panel.grid.minor.y = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 16),
+    plot.title = element_text(face = "bold", hjust = 0.01, size = 18)
+  ) +
+  ggtitle("")
+
+funnel_plot_S004
+
+#S004 is highly influential (> 100% pct_change) and flips the sign of lnRR
+#Author (D. Francis) contacted. Poor performance linked to poor diet stability
+#Run MLMA without S004?????
+
+#Create dataset 
+clean_data_sens <- clean_data %>%
+     filter(study_ID != "S004")
+
+#Create new variance covariance (VCV) matrix for clean_data_sens
+VCV_sens <- vcalc(
+  vi = vi_lnRR,
+  cluster = cohort_ID,
+  obs = ES_ID,
+  rho = 0.5,
+  data = clean_data_sens
+)
+
+# Run 3-level meta-analysis
+res_3L_sens <- rma.mv(yi = lnRR, V = VCV_sens,
+                     random = ~ 1 | study_ID / ES_ID,
+                     data = clean_data_sens,
+                     method = "REML")
+res_3L_sens
+
+#Check VCV
+dim(res_3L_sens$V)           # should be n x n
+is.matrix(res_3L_sens$V)     # should return TRUE
+str(res_3L_sens$V)
+
+# Create summary table comparing sensitive model (S004 removed) and full model
+sensitivity_compare <- data.frame(
+  Model = c("Full", "S004 removed"),
+  k = c(res_3L_all$k, res_3L_sens$k),
+  Estimate = c(res_3L_all$beta, res_3L_sens$beta),
+  pval = c(res_3L_all$pval, res_3L_sens$pval),
+  SE = c(res_3L_all$se, res_3L_sens$se),
+  CI_low = c(res_3L_all$ci.lb, res_3L_sens$ci.lb),
+  CI_high = c(res_3L_all$ci.ub, res_3L_sens$ci.ub),
+  tau2_study = c(res_3L_all$sigma2[1], res_3L_sens$sigma2[1]),
+  tau2_ES = c(res_3L_all$sigma2[2], res_3L_sens$sigma2[2]),
+  Q = c(res_3L_all$QE, res_3L_sens$QE),
+  Q_pval = c(res_3L_all$QEp, res_3L_sens$QEp)
+)
+
+sensitivity_compare #Print comparison table
+
+# Extract variance components from res_3L_sensitivity
+sigma_study_sens   <- res_3L_sens$sigma2[1]
+sigma_exp_sens    <- res_3L_sens$sigma2[2]
+
+# Mean sampling variance
+mean_vi_sens <- mean(clean_data_sens$vi_lnRR)
+
+# Total variance
+total_var_sens <- sigma_study_sens + sigma_exp_sens + mean_vi_sens
+
+# I² calculations
+I2_study_sens   <- sigma_study_sens   / total_var_sens * 100
+I2_exp_sens    <- sigma_exp_sens     / total_var_sens * 100
+I2_total_sens   <- (sigma_study_sens + sigma_exp_sens) / total_var_sens * 100
+
+I2_study_sens; I2_exp_sens; I2_total_sens
+
+##Orchard Plot 
+sens_data_plot <- orchaRd::orchard_plot(
+  res_3L_sens,
+  mod = "1",
+  xlab = "Effect Size (lnRR)",
+  group = "study_ID"
+) +
+  annotate(
+    geom = "text",
+    x = 0.7,
+    y = 2,
+    label = paste0("italic(I)^{2} == ", round(I2_total_all[1], 2), "*\"%\""),
+    color = "black",
+    parse = TRUE,
+    size = 3
+  ) +
+  ggtitle("A) All Outcome Categories") +
+  theme(plot.title = element_text(face = "bold")) +
+  scale_fill_manual(values = "grey") +
+  scale_colour_manual(values = "grey") +
+  scale_y_continuous(limits = c(-2.5, 2.5))
+
+sens_data_plot   #Print orchard plot
+ggsave("sens_data_orchard_plot.png", width = 15, height = 10, units = "in")     #Save orchard plot
+
+
+##Publication bias
+# Compute SE, precision, and effective sample size for all_data
+clean_data_sens <- clean_data_sens %>%
+  mutate(
+    se_lnRR = sqrt(vi_lnRR),  
+    precision = 1 / se_lnRR,                     
+    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
+    inv_n_eff = 1 / n_eff                  
+  )
+
+# Fit three-level MLMA with precision as moderator
+res_bias_precision_all <- rma.mv(
+  yi   = lnRR,
+  V    = vi_lnRR,
+  mods = ~ precision,                       
+  random = list(                  
+    ~ 1 | study_ID / ES_ID 
+  ), 
+  data = clean_data_sens,
+  method = "REML")
+summary(res_bias_precision_all)
+
+# Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
+cr2_test_precision <- coef_test(
+  res_bias_precision_all,
+  vcov = "CR2",
+  cluster = clean_data_sens$study_ID,
+  test = "Satterthwaite"
+)
+print(cr2_test_precision)
+
+# Create funnel plot
+#Calculate SE
+clean_data_sens <- clean_data_sens %>%
+  mutate(SE = 1 / precision)
+
+# Create a grid of precision values for plotting the funnel
+precision_grid <- seq(min(clean_data_sens$precision), max(clean_data_sens$precision), length.out = 100)
+
+# Pooled effect (mean lnRR)
+mean_lnRR <- mean(clean_data_sens$lnRR, na.rm = TRUE)
+
+# Upper and lower bounds
+bounds <- data.frame(
+  precision = precision_grid,
+  lnRR_upper = mean_lnRR + 1.96 / precision_grid,
+  lnRR_lower = mean_lnRR - 1.96 / precision_grid
+)
+str(bounds)
+
+#Create plot
+funnel_plot_all <- ggplot(clean_data_sens, aes(x = lnRR, y = precision)) +
+  geom_ribbon(
+    data = bounds,
+    aes(y = precision, xmin = lnRR_lower, xmax = lnRR_upper),
+    fill = "white",
+    colour = "black",
+    linetype = "dotted",
+    size = 0.5,
+    inherit.aes = FALSE
+  ) +
+  geom_point(shape = 21, fill = "grey", color = "black", size = 3) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +
+  scale_y_continuous(name = "Precision (1/SE)", limits = c(0, 400)) +
+  scale_x_continuous(name = "Effect Size (lnRR)", limits = c(-2.0, 2.0),
+  breaks = seq(-5, 5, by = 0.5)) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(color = "white", size = 0.5),
+    panel.grid.minor.y = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.3, "cm"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 16),
+    plot.title = element_text(face = "bold", hjust = 0.01, size = 18)
+  ) +
+  ggtitle("")
+
+funnel_plot_all    #Print funnel plot
+ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")   #Save funnel plot
+
+#Run MLMR with outcome_category as a moderator (no intercept)
+res_meta_reg <- rma.mv(yi = lnRR, V  = VCV_sens,
+  mods = ~ 0 + outcome_category,        
+  random = list(                
+    ~ 1 | study_ID / ES_ID),
+  data = clean_data_sens,
+  method = "REML"
+)
+res_meta_reg
+
+# Extract variance components
+sigma_study_all_outcome   <- res_meta_reg$sigma2[1]
+sigma_exp_all_outcome    <- res_meta_reg$sigma2[2]
+
+# Mean sampling variance
+mean_vi_all <- mean(clean_data_sens$vi_lnRR)
+
+# Total variance
+total_var_all_outcome <- sigma_study_all_outcome + sigma_exp_all_outcome + mean_vi_all
+
+# I² calculations
+I2_study_all_outcome   <- sigma_study_all_outcome   / total_var_all_outcome * 100
+I2_exp_all_outcome    <- sigma_exp_all_outcome     / total_var_all_outcome * 100
+I2_total_all_outcome   <- (sigma_study_all_outcome + sigma_exp_all_outcome) / total_var_all_outcome * 100
+
+I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
+
+##### Next create sub-groups for each outcome category and run MLMA.
+#### Run MLMR for each outcome category with intervention_dose, study_duration_days and initial_size_g as moderators (in univariate and then multivariate models).
