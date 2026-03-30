@@ -356,7 +356,7 @@ funnel_plot_S004
 #Author (D. Francis) contacted. Poor performance linked to poor diet stability
 #Run MLMA without S004?????
 
-#Create filtered dataset 
+#Create dataset 
 clean_data_sens <- clean_data %>%
      filter(study_ID != "S004")
 
@@ -429,8 +429,17 @@ ggsave("sens_data_orchard_plot.png", width = 15, height = 10, units = "in")     
 
 
 ##Publication bias
+# Compute SE, precision, and effective sample size for all_data
+clean_data_sens <- clean_data_sens %>%
+  mutate(
+    se_lnRR = sqrt(vi_lnRR),  
+    precision = 1 / se_lnRR,                     
+    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
+    inv_n_eff = 1 / n_eff                  
+  )
+
 # Fit three-level MLMA with precision as moderator
-res_bias_precision_sens <- rma.mv(
+res_bias_precision_all <- rma.mv(
   yi   = lnRR,
   V    = vi_lnRR,
   mods = ~ precision,                       
@@ -439,7 +448,7 @@ res_bias_precision_sens <- rma.mv(
   ), 
   data = clean_data_sens,
   method = "REML")
-summary(res_bias_precision_sens)
+summary(res_bias_precision_all)
 
 # Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
 cr2_test_precision <- coef_test(
@@ -463,9 +472,9 @@ mean_lnRR_sens <- mean(clean_data_sens$lnRR, na.rm = TRUE)
 
 # Upper and lower bounds
 bounds_sens <- data.frame(
-  precision = precision_grid_sens,
-  lnRR_upper = mean_lnRR_sens + 1.96 / precision_grid_sens,
-  lnRR_lower = mean_lnRR_sens - 1.96 / precision_grid_sens
+  precision = precision_grid,
+  lnRR_upper = mean_lnRR_sens + 1.96 / precision_grid,
+  lnRR_lower = mean_lnRR_sens - 1.96 / precision_grid
 )
 str(bounds_sens)
 
@@ -500,8 +509,8 @@ funnel_plot_all <- ggplot(clean_data_sens, aes(x = lnRR, y = precision)) +
   ) +
   ggtitle("")
 
-funnel_plot_sens    #Print funnel plot
-ggsave("funnel_plot_sens.png", width = 15, height = 10, units = "in")   #Save funnel plot
+funnel_plot_all    #Print funnel plot
+ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")   #Save funnel plot
 
 #Run MLMR with outcome_category as a moderator (no intercept)
 res_meta_reg <- rma.mv(yi = lnRR, V  = VCV_sens,
@@ -519,3 +528,130 @@ print(I2_sens_outcome)
 
 ##### Next create sub-groups for each outcome category and run MLMA.
 #### Run MLMR for each outcome category with intervention_dose, study_duration_days and initial_size_g as moderators (in univariate and then multivariate models).
+
+#Create subgroup datasets
+clean_data_sens_feed <- clean_data_sens %>%
+     filter(outcome_category == "feed behaviour")  #Feed behaviour dataset
+clean_data_sens_growth <- clean_data_sens %>%
+     filter(outcome_category == "growth performance")   #Growth performance dataset
+clean_data_sens_nutr <- clean_data_sens %>%
+     filter(outcome_category == "nutrient utilisation")    #Nutrient utilisation dataset
+
+#Create function for subgroup MLMA and loop through outcome categories
+run_mlma <- function(data, outcome_cat, rho = 0.5, random_structure = "~1 | study_ID/ES_ID") {
+  
+  # Subset data
+  dat_sub <- data %>% filter(outcome_category == outcome_cat)
+  
+  # Check if there are enough rows
+  if(nrow(dat_sub) < 2) {
+    warning(paste("Not enough data for outcome:", outcome_cat))
+    return(NULL)
+  }
+  
+  # Create variance-covariance matrix
+  V_sub <- vcalc(
+    vi = vi_lnRR,
+    cluster = cohort_ID,
+    obs = ES_ID,
+    rho = rho,
+    data = dat_sub
+  )
+  
+  # Run 3-level meta-analysis
+  res <- rma.mv(
+    yi = lnRR,
+    V  = V_sub,
+    random = as.formula(random_structure),
+    data = dat_sub,
+    method = "REML"
+  )
+  
+  # Return both the result and the VCV
+  list(
+    model = res,
+    VCV = res$V,
+    data = dat_sub
+  )
+}
+
+# Define outcome categories
+outcome_list <- c("feed behaviour", "growth performance", "nutrient utilisation")
+
+# Run MLMA for all outcomes
+results_mlma <- lapply(outcome_list, function(cat) run_mlma(clean_data_sens, cat))
+
+# Name the list elements
+names(results_mlma) <- outcome_list
+
+#Print results for outcome category
+results_mlma[["feed behaviour"]]$model
+results_mlma[["growth performance"]]$model
+results_mlma[["nutrient utilisation"]]$model
+
+##MLMR with experimental design components as moderators (fixed effects)
+#Set fixed effects
+fixed_vars <- c("intervention_dose", "study_duration_days", "initial_size_g")
+
+#Create function for running MLMR with whole dataset and each outcome category 
+run_mlma_fe <- function(data, outcome_cat = NULL, fixed_effects = NULL, 
+                        rho = 0.5, random_structure = "~1 | study_ID/ES_ID") {
+  
+  # Subset data
+  if(!is.null(outcome_cat)) {
+    dat_sub <- data %>% filter(outcome_category == outcome_cat)
+  } else {
+    dat_sub <- data
+  }
+  
+  # Create VCV
+  V_sub <- vcalc(
+    vi = vi_lnRR,
+    cluster = cohort_ID,
+    obs = ES_ID,
+    rho = rho,
+    data = dat_sub
+  )
+  
+  # Build moderators
+  if(is.null(fixed_effects)) {
+    mods_formula <- NULL
+  } else {
+    mods_formula <- as.formula(paste("~", paste(fixed_effects, collapse = " + ")))
+  }
+  
+  # Run model (CORRECT)
+  res <- rma.mv(
+    yi = lnRR,
+    V = V_sub,
+    mods = mods_formula,
+    random = as.formula(random_structure),
+    data = dat_sub,
+    method = "REML"
+  )
+  
+  list(
+    model = res,
+    VCV = res$V,
+    data = dat_sub
+  )
+}
+
+outcome_list <- c("overall", "feed behaviour", "growth performance", "nutrient utilisation")
+
+results_mlma_fe <- lapply(outcome_list, function(cat) {
+  
+  if(cat == "overall") {
+    run_mlma_fe(clean_data_sens, outcome_cat = NULL, fixed_effects = fixed_vars)
+  } else {
+    run_mlma_fe(clean_data_sens, outcome_cat = cat, fixed_effects = fixed_vars)
+  }
+  
+})
+
+names(results_mlma_fe) <- outcome_list
+
+results_mlma_fe$overall$model
+results_mlma_fe$`feed behaviour`$model
+results_mlma_fe$`growth performance`$model
+results_mlma_fe$`nutrient utilisation`$model
