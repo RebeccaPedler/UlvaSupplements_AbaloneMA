@@ -115,7 +115,7 @@ all_data_plot <- orchaRd::orchard_plot(
     label = paste0("italic(I)^{2} == ", round(I2_all$I2_total, 2), "*\"%\""),
     color = "black",
     parse = TRUE,
-    size = 3
+    size = 4
 ) +
   ggtitle("A) All Outcome Categories") +
   theme(plot.title = element_text(face = "bold")) +
@@ -124,7 +124,7 @@ all_data_plot <- orchaRd::orchard_plot(
   scale_y_continuous(limits = c(-2.5, 2.5))
 
 all_data_plot   # Print orchard plot
-ggsave("all_data_orchard_plot.png", width = 15, height = 10, units = "in")  # Save orchard plot
+ggsave("all_data_orchard_plot.png", width = 11, height = 8, units = "in")  # Save orchard plot
 
 ##Testing effect of species
 # MLMA with species as fixed effect (no intercept)
@@ -231,7 +231,7 @@ funnel_plot_all <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
   ) +
   geom_point(shape = 21, fill = "grey", color = "black", size = 3) +
   geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 1) +
-  scale_y_continuous(name = "Precision (1/SE)", limits = c(0, 400)) +
+  scale_y_continuous(name = "Precision (1/SE)", limits = c(0, 500)) +
   scale_x_continuous(name = "Effect Size (lnRR)", limits = c(-2.0, 2.0),
                      breaks = seq(-5, 5, by = 0.5)) +
   theme_minimal(base_size = 14) +
@@ -243,35 +243,14 @@ funnel_plot_all <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
     axis.line = element_line(color = "black", linewidth = 0.8),
     axis.ticks.length = unit(0.3, "cm"),
     axis.ticks = element_line(color = "black"),
-    axis.title = element_text(size = 18, face = "bold"),
-    axis.text = element_text(size = 16),
     plot.title = element_text(face = "bold", hjust = 0.01, size = 18)
   ) +
   ggtitle("")
 
 funnel_plot_all    # Print funnel plot
-ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")  # Save funnel plot
+ggsave("funnel_plot_all.png", width = 11, height = 8, units = "in")  # Save funnel plot
 
 ###Sensitivity analysis
-##"Leave one out" method (using vi_lnRR)
-study_list <- unique(clean_data$study_ID)
-sensitivity_results_vi_lnRR <- lapply(study_list, function(S){
-  dat_sub <- subset(clean_data, study_ID != S)
-  res_sub <- rma.mv(lnRR, vi_lnRR, random = ~1 | study_ID/ES_ID, data = dat_sub)
-#Create table
-  data.frame(
-    study_removed = S,
-    est = res_sub$beta,
-    se = res_sub$se,
-    tau2_study = res_sub$sigma2[1],
-    tau2_ES = res_sub$sigma2[2],
-    pct_change = (100 * (res_sub$beta - res_3L_all$beta) / res_3L_all$beta)
-  )
-})  %>%
-  bind_rows()
-
-print(sensitivity_results_vi_lnRR) #Print sensitivity analysis results
-
 # Leave-one-out sensitivity analysis with VCV subsetting
 study_list <- unique(clean_data$study_ID)
 
@@ -309,9 +288,9 @@ sensitivity_results_VCV <- lapply(study_list, function(S) {
 
 print(sensitivity_results_VCV) #Print sensitivity analysis results
 
-#Recreate funnel plot with S004 highlighted and inspect
+#Recreate figures without S004
+#Funnel plot
 funnel_plot_S004 <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
-
   geom_ribbon(
     data = bounds,
     aes(y = precision, xmin = lnRR_lower, xmax = lnRR_upper),
@@ -401,32 +380,6 @@ sensitivity_compare #Print comparison table
 #Extract variance components for res_3L_all
 I2_sens <- calc_I2_3level(res_3L_sens)
 print(I2_sens)
-
-##Orchard Plot 
-sens_data_plot <- orchaRd::orchard_plot(
-  res_3L_sens,
-  mod = "1",
-  xlab = "Effect Size (lnRR)",
-  group = "study_ID"
-) +
-  annotate(
-    geom = "text",
-    x = 0.7,
-    y = 2,
-    label = paste0("italic(I)^{2} == ", round(I2_sens$I2_total, 2), "*\"%\""),
-    color = "black",
-    parse = TRUE,
-    size = 3
-  ) +
-  ggtitle("A) All Outcome Categories") +
-  theme(plot.title = element_text(face = "bold")) +
-  scale_fill_manual(values = "grey") +
-  scale_colour_manual(values = "grey") +
-  scale_y_continuous(limits = c(-2.5, 2.5))
-
-sens_data_plot   #Print orchard plot
-ggsave("sens_data_orchard_plot.png", width = 15, height = 10, units = "in")     #Save orchard plot
-
 
 ##Publication bias
 # Compute SE, precision, and effective sample size for all_data
