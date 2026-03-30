@@ -84,22 +84,22 @@ dim(res_3L_all$V)           # should be n x n
 is.matrix(res_3L_all$V)     # should return TRUE
 str(res_3L_all$V)
 
-# Extract variance components from res_3L_all
-sigma_study_all   <- res_3L_all$sigma2[1]
-sigma_exp_all     <- res_3L_all$sigma2[2]
+##Create function for extracting variance components
+calc_I2_3level <- function(model) {
+  sigma <- model$sigma2
+  mean_vi <- mean(diag(model$V), na.rm = TRUE)
+  total_var <- sum(sigma) + mean_vi
+  
+  data.frame(
+    I2_study = sigma[1] / total_var * 100,
+    I2_ES    = sigma[2] / total_var * 100,
+    I2_total = sum(sigma) / total_var * 100
+  )
+}
 
-# Mean sampling variance
-mean_vi_all <- mean(clean_data$vi_lnRR)
-
-# Total variance
-total_var_all <- sigma_study_all + sigma_exp_all + mean_vi_all
-
-# I² calculations
-I2_study_all   <- sigma_study_all   / total_var_all * 100
-I2_exp_all     <- sigma_exp_all     / total_var_all * 100
-I2_total_all   <- (sigma_study_all + sigma_exp_all) / total_var_all * 100
-
-I2_study_all; I2_exp_all; I2_total_all
+#Extract variance components for res_3L_all
+I2_all <- calc_I2_3level(res_3L_all)
+print(I2_all)
 
 ## Orchard Plot 
 all_data_plot <- orchaRd::orchard_plot(
@@ -112,7 +112,7 @@ all_data_plot <- orchaRd::orchard_plot(
     geom = "text",
     x = 0.7,
     y = 1.5,
-    label = paste0("italic(I)^{2} == ", round(I2_total_all[1], 2), "*\"%\""),
+    label = paste0("italic(I)^{2} == ", round(I2_all$I2_total, 2), "*\"%\""),
     color = "black",
     parse = TRUE,
     size = 3
@@ -399,22 +399,9 @@ sensitivity_compare <- data.frame(
 
 sensitivity_compare #Print comparison table
 
-# Extract variance components from res_3L_sensitivity
-sigma_study_sens   <- res_3L_sens$sigma2[1]
-sigma_exp_sens    <- res_3L_sens$sigma2[2]
-
-# Mean sampling variance
-mean_vi_sens <- mean(clean_data_sens$vi_lnRR)
-
-# Total variance
-total_var_sens <- sigma_study_sens + sigma_exp_sens + mean_vi_sens
-
-# I² calculations
-I2_study_sens   <- sigma_study_sens   / total_var_sens * 100
-I2_exp_sens    <- sigma_exp_sens     / total_var_sens * 100
-I2_total_sens   <- (sigma_study_sens + sigma_exp_sens) / total_var_sens * 100
-
-I2_study_sens; I2_exp_sens; I2_total_sens
+#Extract variance components for res_3L_all
+I2_sens <- calc_I2_3level(res_3L_sens)
+print(I2_sens)
 
 ##Orchard Plot 
 sens_data_plot <- orchaRd::orchard_plot(
@@ -427,7 +414,7 @@ sens_data_plot <- orchaRd::orchard_plot(
     geom = "text",
     x = 0.7,
     y = 2,
-    label = paste0("italic(I)^{2} == ", round(I2_total_all[1], 2), "*\"%\""),
+    label = paste0("italic(I)^{2} == ", round(I2_sens$I2_total, 2), "*\"%\""),
     color = "black",
     parse = TRUE,
     size = 3
@@ -479,23 +466,23 @@ clean_data_sens <- clean_data_sens %>%
   mutate(SE = 1 / precision)
 
 # Create a grid of precision values for plotting the funnel
-precision_grid <- seq(min(clean_data_sens$precision), max(clean_data_sens$precision), length.out = 100)
+precision_grid_sens <- seq(min(clean_data_sens$precision), max(clean_data_sens$precision), length.out = 100)
 
 # Pooled effect (mean lnRR)
-mean_lnRR <- mean(clean_data_sens$lnRR, na.rm = TRUE)
+mean_lnRR_sens <- mean(clean_data_sens$lnRR, na.rm = TRUE)
 
 # Upper and lower bounds
-bounds <- data.frame(
+bounds_sens <- data.frame(
   precision = precision_grid,
-  lnRR_upper = mean_lnRR + 1.96 / precision_grid,
-  lnRR_lower = mean_lnRR - 1.96 / precision_grid
+  lnRR_upper = mean_lnRR_sens + 1.96 / precision_grid,
+  lnRR_lower = mean_lnRR_sens - 1.96 / precision_grid
 )
-str(bounds)
+str(bounds_sens)
 
 #Create plot
 funnel_plot_all <- ggplot(clean_data_sens, aes(x = lnRR, y = precision)) +
   geom_ribbon(
-    data = bounds,
+    data = bounds_sens,
     aes(y = precision, xmin = lnRR_lower, xmax = lnRR_upper),
     fill = "white",
     colour = "black",
@@ -536,22 +523,9 @@ res_meta_reg <- rma.mv(yi = lnRR, V  = VCV_sens,
 )
 res_meta_reg
 
-# Extract variance components
-sigma_study_all_outcome   <- res_meta_reg$sigma2[1]
-sigma_exp_all_outcome    <- res_meta_reg$sigma2[2]
-
-# Mean sampling variance
-mean_vi_all <- mean(clean_data_sens$vi_lnRR)
-
-# Total variance
-total_var_all_outcome <- sigma_study_all_outcome + sigma_exp_all_outcome + mean_vi_all
-
-# I² calculations
-I2_study_all_outcome   <- sigma_study_all_outcome   / total_var_all_outcome * 100
-I2_exp_all_outcome    <- sigma_exp_all_outcome     / total_var_all_outcome * 100
-I2_total_all_outcome   <- (sigma_study_all_outcome + sigma_exp_all_outcome) / total_var_all_outcome * 100
-
-I2_study_all_outcome; I2_exp_all_outcome; I2_total_all_outcome
+#Extract variance components for res_3L_all
+I2_sens_outcome <- calc_I2_3level(res_meta_reg)
+print(I2_sens_outcome)
 
 ##### Next create sub-groups for each outcome category and run MLMA.
 #### Run MLMR for each outcome category with intervention_dose, study_duration_days and initial_size_g as moderators (in univariate and then multivariate models).
