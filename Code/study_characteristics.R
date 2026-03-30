@@ -89,6 +89,24 @@ mydata <- mydata %>%
 #Number of ES_ID
 length(unique(mydata$ES_ID))
 
+## Sanity checks of identifiers 
+#cohort_ID (each cohort_ID should only have 1 unique control_mean)
+cohort_ID (each cohort_ID should only have 1 unique control_mean)
+cohort_ID_sanitycheck <- mydata %>%
+  group_by(cohort_ID) %>%
+  summarise(
+    n_unique_control_mean = n_distinct(control_mean)
+  )
+print(cohort_ID_sanitycheck, n = 114)
+
+#ES_ID (each ES_ID should only have 1 unique study_ID)
+ES_ID_sanitycheck <- mydata %>%
+  group_by(ES_ID) %>%
+  summarise(
+    n_unique_study_ID = n_distinct(study_ID)
+  )
+print(ES_ID_sanitycheck, n = 217)
+
 ## Number of ES_ID (observations) per study
 mydata %>%
   group_by(study_ID) %>%
