@@ -99,6 +99,12 @@ cohort_ID_sanitycheck <- mydata %>%
   )
 print(cohort_ID_sanitycheck, n = 114)
 
+#control_mean (each control_mean should only have 1 unique cohort_ID
+control_mean_sanitycheck <- mydata %>%
+  group_by(control_mean, study_ID) %>%
+  summarise(n_cohort = n_distinct(cohort_ID), .groups = "drop")
+print(control_mean_sanitycheck, n = 114)
+
 #ES_ID (each ES_ID should only have 1 unique study_ID)
 ES_ID_sanitycheck <- mydata %>%
   group_by(ES_ID) %>%
