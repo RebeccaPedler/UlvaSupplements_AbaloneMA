@@ -253,7 +253,6 @@ funnel_plot_all    # Print funnel plot
 ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")  # Save funnel plot
 
 ###Sensitivity analysis
-
 ##"Leave one out" method (using vi_lnRR)
 study_list <- unique(clean_data$study_ID)
 sensitivity_results_vi_lnRR <- lapply(study_list, function(S){
@@ -357,7 +356,7 @@ funnel_plot_S004
 #Author (D. Francis) contacted. Poor performance linked to poor diet stability
 #Run MLMA without S004?????
 
-#Create dataset 
+#Create filtered dataset 
 clean_data_sens <- clean_data %>%
      filter(study_ID != "S004")
 
@@ -430,17 +429,8 @@ ggsave("sens_data_orchard_plot.png", width = 15, height = 10, units = "in")     
 
 
 ##Publication bias
-# Compute SE, precision, and effective sample size for all_data
-clean_data_sens <- clean_data_sens %>%
-  mutate(
-    se_lnRR = sqrt(vi_lnRR),  
-    precision = 1 / se_lnRR,                     
-    n_eff = (treatment_n * control_n) / (treatment_n + control_n),
-    inv_n_eff = 1 / n_eff                  
-  )
-
 # Fit three-level MLMA with precision as moderator
-res_bias_precision_all <- rma.mv(
+res_bias_precision_sens <- rma.mv(
   yi   = lnRR,
   V    = vi_lnRR,
   mods = ~ precision,                       
@@ -449,7 +439,7 @@ res_bias_precision_all <- rma.mv(
   ), 
   data = clean_data_sens,
   method = "REML")
-summary(res_bias_precision_all)
+summary(res_bias_precision_sens)
 
 # Robust small-sample corrected test for the moderator (CR2, Satterthwaite df)
 cr2_test_precision <- coef_test(
@@ -473,9 +463,9 @@ mean_lnRR_sens <- mean(clean_data_sens$lnRR, na.rm = TRUE)
 
 # Upper and lower bounds
 bounds_sens <- data.frame(
-  precision = precision_grid,
-  lnRR_upper = mean_lnRR_sens + 1.96 / precision_grid,
-  lnRR_lower = mean_lnRR_sens - 1.96 / precision_grid
+  precision = precision_grid_sens,
+  lnRR_upper = mean_lnRR_sens + 1.96 / precision_grid_sens,
+  lnRR_lower = mean_lnRR_sens - 1.96 / precision_grid_sens
 )
 str(bounds_sens)
 
@@ -510,8 +500,8 @@ funnel_plot_all <- ggplot(clean_data_sens, aes(x = lnRR, y = precision)) +
   ) +
   ggtitle("")
 
-funnel_plot_all    #Print funnel plot
-ggsave("funnel_plot_all.png", width = 15, height = 10, units = "in")   #Save funnel plot
+funnel_plot_sens    #Print funnel plot
+ggsave("funnel_plot_sens.png", width = 15, height = 10, units = "in")   #Save funnel plot
 
 #Run MLMR with outcome_category as a moderator (no intercept)
 res_meta_reg <- rma.mv(yi = lnRR, V  = VCV_sens,
