@@ -347,6 +347,22 @@ sensitivity_results_VCV <- lapply(study_list, function(S) {
 print(sensitivity_results_VCV) #Print sensitivity analysis results
 
 # Recreate funnel plot with S004 highlighted
+
+# Create plotting parameters outside of function
+clean_data <- clean_data %>%
+  mutate(
+    se_lnRR = sqrt(vi_lnRR),
+    precision = 1 / se_lnRR
+  )
+
+mean_lnRR <- mean(clean_data$lnRR, na.rm = TRUE)
+precision_grid <- seq(min(clean_data$precision), max(clean_data$precision), length.out = 100)
+bounds <- data.frame(
+  precision = precision_grid,
+  lnRR_upper = mean_lnRR + 1.96 / precision_grid,
+  lnRR_lower = mean_lnRR - 1.96 / precision_grid
+)
+
 # Funnel plot
 funnel_plot_S004 <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
   geom_ribbon(
@@ -391,7 +407,7 @@ funnel_plot_S004 <- ggplot(clean_data, aes(x = lnRR, y = precision)) +
 funnel_plot_S004
 
 # Save funnel plot
-ggsave("funnel_plot_sens_data.png", width = 11, height = 8, units = "in") 
+ggsave("funnel_plot_S004_highlighted.png", width = 11, height = 8, units = "in") 
 
 # S004 is highly influential (> 100% pct_change) and flips the sign of lnRR. Removal improves publication bias risk.
 # Author (D. Francis) suggested that poor performance linked to poor diet stability
@@ -665,14 +681,14 @@ run_mlmr_fe <- function(data, outcome_cat = NULL, fixed_effects = NULL,
 
 # Run both models and compare
 # Size model
-size_MLMR <- run_mlma_fe(
+size_MLMR <- run_mlmr_fe(
   data = clean_data_sens,
   outcome_cat = NULL,   # overall model
   fixed_effects = fixed_vars_size
 )
 
 # Duration model
-duration_MLMR <- run_mlma_fe(
+duration_MLMR <- run_mlmr_fe(
   data = clean_data_sens,
   outcome_cat = NULL,   # overall model
   fixed_effects = fixed_vars_duration
@@ -722,8 +738,7 @@ results_mlmr_size$`feed behaviour`$model
 results_mlmr_size$`growth performance`$model
 results_mlmr_size$`nutrient utilisation`$model
 
-## Again, dose-response estimates vary between size_MLMR and duration_MLMR BUT dose effects are robust regardless of if initial_size_g
-or study duration is included as a fixed effect
+## Again, dose-response estimates vary between size_MLMR and duration_MLMR BUT dose effects are robust regardless of if initial_size_g or study duration is included as a fixed effect
 
 ## Plot the relationship between Ulva dose and effect size (lnRR)
 # Run univariate MLMR (no intercept model) for clean_data_sens with intervention dose as fixed effect
@@ -758,6 +773,10 @@ ulva_dose <- bubble_plot(res_meta_dose,
 
 # Print plot
 ulva_dose
+
+# Save funnel plot
+ggsave("ulva_dose_relationship.png", width = 8, height = 6, units = "in") 
+
 
 # Save plot
 ggsave("ulva_dose_relationship.png", width = 8, height = 6, units = "in") 
