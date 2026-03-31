@@ -14,7 +14,8 @@ packages <- c(
   "ggplot2",       
   "ggcorrplot",    
   "patchwork",     
-  "car"          
+  "car",
+  "clubSandwich"
 )
 
 # Install any missing packages
