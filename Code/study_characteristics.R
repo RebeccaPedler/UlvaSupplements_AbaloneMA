@@ -7,14 +7,13 @@
 ## Install packages
 # install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
 
-
 ## Load required libraries
 library(dplyr)
 library(tidyr)
 library(tidyverse)
-library(rnaturalearth)   # for map data
+library(rnaturalearth)   
 library(rnaturalearthdata)
-library(sf)              # for spatial handling
+library(sf)             
 library(ggplot2)
 library(grid)
 library(patchwork)
@@ -79,18 +78,18 @@ mydata <- mydata %>%
 ##### Study Characteristics
 
 # Get unique study IDs
-#mydata$study_ID
+# mydata$study_ID
 length(unique(mydata$study_ID)) #11
 
 ## Rename experiment_ID to ES_ID
 mydata <- mydata %>%
   rename(ES_ID = experiment_ID)
 
-#Number of ES_ID
+# Number of ES_ID
 length(unique(mydata$ES_ID))
 
 ## Sanity checks of identifiers 
-#cohort_ID (each cohort_ID should only have 1 unique control_mean)
+# cohort_ID (each cohort_ID should only have 1 unique control_mean)
 cohort_ID (each cohort_ID should only have 1 unique control_mean)
 cohort_ID_sanitycheck <- mydata %>%
   group_by(cohort_ID) %>%
@@ -99,13 +98,13 @@ cohort_ID_sanitycheck <- mydata %>%
   )
 print(cohort_ID_sanitycheck, n = 114)
 
-#control_mean (each control_mean should only have 1 unique cohort_ID
+# control_mean (each control_mean should only have 1 unique cohort_ID
 control_mean_sanitycheck <- mydata %>%
   group_by(control_mean, study_ID) %>%
   summarise(n_cohort = n_distinct(cohort_ID), .groups = "drop")
 print(control_mean_sanitycheck, n = 114)
 
-#ES_ID (each ES_ID should only have 1 unique study_ID)
+# ES_ID (each ES_ID should only have 1 unique study_ID)
 ES_ID_sanitycheck <- mydata %>%
   group_by(ES_ID) %>%
   summarise(
@@ -331,7 +330,7 @@ world_map <- ggplot(world_data) +
 
 ## Display the plot:
 world_map
-#Save map
+# Save map
 ggsave("world_map.png", width = 10, height = 5, units = "in")
 
 # # Combine side by side with one shared legend = NOT YET (also it should be vertical not horizontal)
@@ -342,7 +341,7 @@ ggsave("world_map.png", width = 10, height = 5, units = "in")
 
 
 ### Summarise number and percentage of unique studies per publication year
-#table(mydata$study_ID, mydata$publication_year)
+# table(mydata$study_ID, mydata$publication_year)
 publication_summary <- mydata %>%
   distinct(study_ID, publication_year) %>%
   group_by(publication_year) %>%
@@ -354,14 +353,14 @@ publication_summary <- mydata %>%
   )
 print(publication_summary)
 
-##Create bubble plot of publication type-year
-#Summarise number of unique studies per publication-year combo
+## Create bubble plot of publication type-year
+# Summarise number of unique studies per publication-year combo
 bubble_data_publication <- clean_data %>%
   distinct(study_ID, journal, publication_year, publication_type) %>%
   group_by(journal, publication_year, publication_type) %>%
   summarise(unique_study_count = n(), .groups = "drop")
 
-#Change journal names to shortened versions
+# Change journal names to shortened versions
 bubble_data_publication <- bubble_data_publication %>%
   mutate(
     journal = recode(
@@ -496,13 +495,13 @@ table(mydata$intervention_dose, mydata$outcome_category)
 table(mydata$experimental_system, mydata$outcome_category)
 table(mydata$experimental_unit, mydata$outcome_category)
 
-###Create Sankey plot to investigate moderator overlap and/or potential collinearity 
+### Create Sankey plot to investigate moderator overlap and/or potential collinearity 
 
-#The Sankey plot was generated using functions from Yang Y, Lagisz M, Nakagawa S. Visualization toolkits for enriching meta-analyses through evidence maps, bibliometrics, 
+# The Sankey plot was generated using functions from Yang Y, Lagisz M, Nakagawa S. Visualization toolkits for enriching meta-analyses through evidence maps, bibliometrics, 
 and alternative impact metrics. Res Synth Methods. 2025;16(1). doi:10.1017/rsm.2024.3
-#Please go to github.com/Yefeng0920/MA_Map_Bib and run the custom.R script in folder, "Function".
+# Please go to github.com/Yefeng0920/MA_Map_Bib and run the custom.R script in folder, "Function".
 
-##Create bins for continious numerical data and order ascending
+## Create bins for continious numerical data and order ascending
 mydata_alluvial <- mydata %>%
   mutate(
     dose_cat = cut(
@@ -526,15 +525,15 @@ mydata_alluvial <- mydata %>%
       right = TRUE
     ))
 
-#Makes labels ascending order
+# Makes labels ascending order
     mydata_allsuvial <- mydata_alluvial %>%
     mutate(
     dose_cat = factor(dose_cat, levels = c("≤2.5%", "2.5–5%", "5–10%", "10-20%", "20-30%", ">30%")),
     duration_cat = factor(duration_cat, levels = c("≤30 d", "30-60 d", "60–120 d", "120–180 d", ">180 d")),
     size_cat = factor(size_cat, levels = c("≤1 g", "1–10 g", "10–50 g", ">50 g")))
 
-##Prepare species names 
-#Check names 
+## Prepare species names 
+# Check names 
 unique(mydata_alluvial$species)
 
  # Replace 'Haliotis ' with 'H. '
@@ -546,7 +545,7 @@ mydata_alluvial <- mydata_alluvial %>%
 mydata_alluvial <- mydata_alluvial %>%
   dplyr::select(experimental_system,  study_conditions, intervention_preparation, species, dose_cat, duration_cat, size_cat) #select columns for the plot
 
-#Create long object
+# Create long object
 sankey_long <- dlong(
   mydata_alluvial,
   experimental_system,
@@ -571,7 +570,7 @@ sankey_long <- dlong(
 
 str(sankey_long)
 
-#Define levels for each node and order 
+# Define levels for each node and order 
 node_levels <- c(
   # Experimental system
   sort(unique(mydata_alluvial$experimental_system)),
@@ -595,7 +594,7 @@ sankey_long <- sankey_long %>%
     next_node = factor(next_node, levels = node_levels)
   )
 
-#Create plot
+# Create plot
 sankey_plot <- ggplot(
   sankey_long,
   aes(
@@ -629,7 +628,7 @@ sankey_plot <- ggplot(
     position = "top"
   )
 
-#View plot 
+# View plot 
 sankey_plot
 #Save plot
 ggsave("Sankey_plot.png", width = 20, height = 10, units = "in")
@@ -698,7 +697,7 @@ mydata %>%  filter(treatment_SD == 0 | control_SD == 0) %>% dim()   # 4 zero SDs
 
 ### CV
 # Note: Coefficient of Variation (CV = \(\sigma /\mu \)).
-# Bbiological data usually display a CV between 0.05 (5%) and 0.5 (50%), so need to check for atypical values
+# Bibiological data usually display a CV between 0.05 (5%) and 0.5 (50%), so need to check for atypical values
 
 ## Calculate treatment CV - treatment_SD to treatment_mean ratio:
 
@@ -731,7 +730,7 @@ ggplot(mydata, aes(x = treatment_CV)) +
 
 ## Show rows with CV == 0:
 mydata %>% filter(treatment_CV == 0 | control_CV == 0) %>% View() # 4 rows with zero SDs (all S004, mostly arbitrary=y units) - CHECK MANUALLY! (and substitute)
-#mydata %>% filter(study_ID == "S004") %>% View() # see all records from S004
+# mydata %>% filter(study_ID == "S004") %>% View() # see all records from S004
 
 ## Replace zero SDs with 0.02 and SEs with 0.01 (smallest non-zero values from the same study and measurement units) to avoid issues in ES calculations:
 mydata <- mydata %>%
@@ -742,7 +741,7 @@ mydata <- mydata %>%
     control_SE = ifelse(control_SE == 0, 0.01, control_SE)
   )
 
-#Recalculate CV and rerun checks 
+# Recalculate CV and rerun checks 
 mydata <- mydata %>%
   mutate(control_CV = control_SD / control_mean) %>%
   mutate(treatment_CV = treatment_SD / treatment_mean)
@@ -760,15 +759,15 @@ mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # 14 row
 ## Show rows with CV > 0.5:
 mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows with high SDs - CHECK MANUALLY and fix SDs, SEs here using R code,  if needed!
 
-#ES_ID where CV > 0.5 manually checked in original publication
-#S006.3, S011.10, S011.11, S012.12, S002.13, S002.14 checked in article - true reported value
+# ES_ID where CV > 0.5 manually checked in original publication
+# S006.3, S011.10, S011.11, S012.12, S002.13, S002.14 checked in article - true reported value
 
-#ES_ID where CV < 0.005 manually checked in original publication
+# ES_ID where CV < 0.005 manually checked in original publication
 # S001.6, S004.11, S004.23, S004.35, S006.23, S006.26 - true reported value
-#SE for ES_ID = S001.16, S001.18 and S001.26 entered as 0.007, true SE from article is 0.07
-#S004.22 control_SE and treatment_SE entered wrong way around
-#S008.2, S008.8, S008.14 CONTROL_SE entered as 0.01, true SE is 0.07
-#S004.27 control_mean and control_SE data entered into treatment_mean and treatment_SE
+# SE for ES_ID = S001.16, S001.18 and S001.26 entered as 0.007, true SE from article is 0.07
+# S004.22 control_SE and treatment_SE entered wrong way around
+# S008.2, S008.8, S008.14 CONTROL_SE entered as 0.01, true SE is 0.07
+# S004.27 control_mean and control_SE data entered into treatment_mean and treatment_SE
 
 ##Let's fix errors
 mydata <- mydata %>%
@@ -831,17 +830,17 @@ mydata <- mydata %>%
     )
   )
 
-##Now reperform CV < 0.005 checks
+## Now reperform CV < 0.005 checks
 ## Show rows with CV < 0.005:
 mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # S001.18, S004.22, S004.27 still < 0.005 despite ammending
 
-#Arcsine transform proportional data (protein deposition and energy deposition)
-#Check data 
+# Arcsine transform proportional data (protein deposition and energy deposition)
+# Check data 
 mydata %>%
   dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
   dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
-#Convert data to proportions
+# Convert data to proportions
 mydata <- mydata %>%
   mutate(
     treatment_mean = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
@@ -854,7 +853,7 @@ mydata <- mydata %>%
                              control_SD / 100, control_SD)
   )
 
-#Arcsine transform
+# Arcsine transform
 mydata <- mydata %>%
    mutate(
     control_mean = ifelse(
@@ -874,7 +873,7 @@ mydata <- mydata %>%
     )
   )
 
-#Check data again to see if transformation successful
+# Check data again to see if transformation successful
 mydata %>%
   dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
   dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
