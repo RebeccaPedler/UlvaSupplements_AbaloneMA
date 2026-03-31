@@ -5,16 +5,16 @@
 ## Load required packages
 # List packages
 packages <- c(
-  "here",          # Project paths
-  "readr",         # CSV import
-  "dplyr",         # Data manipulation
-  "tidyr",         # Data reshaping
-  "metafor",       # Meta-analysis & VCV
-  "orchaRd",       # Orchard plots
-  "ggplot2",       # Plotting
-  "ggcorrplot",    # Correlation plots
-  "patchwork",     # Combining plots
-  "car"            # VIF / multicollinearity
+  "here",         
+  "readr",         
+  "dplyr",         
+  "tidyr",         
+  "metafor",       
+  "orchaRd",       
+  "ggplot2",       
+  "ggcorrplot",    
+  "patchwork",     
+  "car"          
 )
 
 # Install any missing packages
