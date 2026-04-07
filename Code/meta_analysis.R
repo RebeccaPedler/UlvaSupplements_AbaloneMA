@@ -29,6 +29,7 @@ for (p in packages) {
 ###Please download GitHub repository and then run the following
 here()
 clean_data <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "cleaned_data_for_meta_analysis.csv"))
+#clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
 head(clean_data)
 
 # Calculate effect size (lnRR) and variance
@@ -95,6 +96,11 @@ VCV <- vcalc(
   data = clean_data
 )
 
+# Check VCV
+dim(res_3L_all$V)           # should be n x n
+is.matrix(res_3L_all$V)     # should return TRUE
+str(res_3L_all$V)
+
 ## Run meta-analysis
 # All clean_data (overall model)
 res_3L_all <- rma.mv(yi = lnRR, V = VCV,
@@ -103,10 +109,6 @@ res_3L_all <- rma.mv(yi = lnRR, V = VCV,
                      method = "REML")
 res_3L_all
 
-# Check VCV
-dim(res_3L_all$V)           # should be n x n
-is.matrix(res_3L_all$V)     # should return TRUE
-str(res_3L_all$V)
 
 ## Create function for extracting variance components
 calc_I2_3level <- function(model) {

@@ -90,7 +90,7 @@ length(unique(mydata$ES_ID))
 
 ## Sanity checks of identifiers 
 # cohort_ID (each cohort_ID should only have 1 unique control_mean)
-cohort_ID (each cohort_ID should only have 1 unique control_mean)
+unique(mydata$cohort_ID) #(each cohort_ID should only have 1 unique control_mean)
 cohort_ID_sanitycheck <- mydata %>%
   group_by(cohort_ID) %>%
   summarise(
@@ -498,7 +498,7 @@ table(mydata$experimental_unit, mydata$outcome_category)
 ### Create Sankey plot to investigate moderator overlap and/or potential collinearity 
 
 # The Sankey plot was generated using functions from Yang Y, Lagisz M, Nakagawa S. Visualization toolkits for enriching meta-analyses through evidence maps, bibliometrics, 
-and alternative impact metrics. Res Synth Methods. 2025;16(1). doi:10.1017/rsm.2024.3
+# and alternative impact metrics. Res Synth Methods. 2025;16(1). doi:10.1017/rsm.2024.3
 # Please go to github.com/Yefeng0920/MA_Map_Bib and run the custom.R script in folder, "Function".
 
 ## Create bins for continious numerical data and order ascending
