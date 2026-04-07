@@ -204,7 +204,7 @@ anova(res_3L_all, res_species_random)
 
 #### Adding species as a random effect does not improve model fit. Continue without?
 
-## Testing if outcome is a significant moderator
+## Testing if broadoutcome category is a significant moderator
 res_outcome_fixed <- rma.mv(
   yi   = lnRR,
   V    = VCV,
