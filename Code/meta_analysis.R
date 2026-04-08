@@ -18,18 +18,18 @@ packages <- c(
   "clubSandwich"
 )
 
-# Install any missing packages
+# Install and load any missing packages
 installed_packages <- rownames(installed.packages())
 for (p in packages) {
   if (!(p %in% installed_packages)) {
     install.packages(p, dependencies = TRUE)
   }
+  library(p, character.only = TRUE)
 }
 
 ###Please download GitHub repository and then run the following
 here()
-clean_data <- read_csv(here("GitHub", "UlvaSupplements_AbaloneMA", "Data", "cleaned_data_for_meta_analysis.csv"))
-#clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
+clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
 head(clean_data)
 
 # Calculate effect size (lnRR) and variance
@@ -202,7 +202,7 @@ summary(res_species_random)
 # Compare models
 anova(res_3L_all, res_species_random)
 
-#### Adding species as a random effect does not improve model fit. Continue without?
+#### Adding species as a random effect does not improve model fit, continue without.
 
 ## Testing if broadoutcome category is a significant moderator
 res_outcome_fixed <- rma.mv(
@@ -414,7 +414,7 @@ ggsave("funnel_plot_S004_highlighted.png", width = 11, height = 8, units = "in")
 
 # S004 is highly influential (> 100% pct_change) and flips the sign of lnRR. Removal improves publication bias risk.
 # Author (D. Francis) suggested that poor performance linked to poor diet stability
-# Run MLMA without S004?????
+# Run MLMA without S004
 
 # Create dataset 
 clean_data_sens <- clean_data %>%
