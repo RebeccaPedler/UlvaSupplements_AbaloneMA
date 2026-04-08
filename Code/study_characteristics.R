@@ -355,8 +355,8 @@ print(publication_summary)
 
 ## Create bubble plot of publication type-year
 # Summarise number of unique studies per publication-year combo
-bubble_data_publication <- clean_data %>%
-  distinct(study_ID, journal, publication_year, publication_type) %>%
+bubble_data_publication <- mydata %>%
+  distinct(study_ID, publication_year, publication_type) %>%
   group_by(journal, publication_year, publication_type) %>%
   summarise(unique_study_count = n(), .groups = "drop")
 
@@ -500,7 +500,45 @@ table(mydata$experimental_unit, mydata$outcome_category)
 # The Sankey plot was generated using functions from Yang Y, Lagisz M, Nakagawa S. Visualization toolkits for enriching meta-analyses through evidence maps, bibliometrics, 
 # and alternative impact metrics. Res Synth Methods. 2025;16(1). doi:10.1017/rsm.2024.3
 # Please go to github.com/Yefeng0920/MA_Map_Bib and run the custom.R script in folder, "Function".
-
+#long format -----------------------------------------------------------------
+dlong <- function(.df, ..., value = NULL) {
+  if("..r" %in% names(.df)) stop("The column name '..r' is not allowed")
+  .vars <- dplyr::quos(...)
+  
+  if(!missing(value)) {
+    value_var <- dplyr::enquo(value)
+    out <- .df %>%
+      dplyr::select(!!!.vars, value = !!value_var) %>%
+      dplyr::mutate(..r = dplyr::row_number()) %>%
+      tidyr::gather(x, node, -..r, -value) %>%
+      dplyr::arrange(.data$..r) %>%
+      dplyr::group_by(.data$..r) %>%
+      dplyr::mutate(next_x = dplyr::lead(.data$x),
+                    next_node = dplyr::lead(.data$node)
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(-..r) %>%
+      dplyr::relocate(value, .after = dplyr::last_col())
+  } else {
+    out <- .df %>%
+      dplyr::select(!!!.vars) %>%
+      dplyr::mutate(..r = dplyr::row_number()) %>%
+      tidyr::gather(x, node, -..r) %>%
+      dplyr::arrange(.data$..r) %>%
+      dplyr::group_by(.data$..r) %>%
+      dplyr::mutate(next_x = dplyr::lead(.data$x),
+                    next_node = dplyr::lead(.data$node)
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(-..r)
+  }
+  
+  levels <- unique(out$x)
+  
+  out %>%
+    dplyr::mutate(dplyr::across(c(x, next_x), ~factor(., levels = levels)))
+}
+                   
 ## Create bins for continious numerical data and order ascending
 mydata_alluvial <- mydata %>%
   mutate(
@@ -546,17 +584,6 @@ mydata_alluvial <- mydata_alluvial %>%
   dplyr::select(experimental_system,  study_conditions, intervention_preparation, species, dose_cat, duration_cat, size_cat) #select columns for the plot
 
 # Create long object
-sankey_long <- dlong(
-  mydata_alluvial,
-  experimental_system,
-  study_conditions,
-  intervention_preparation,
-  species,
-  dose_cat,
-  duration_cat,
-  size_cat
-)
-
 sankey_long <- dlong(
   mydata_alluvial,
   experimental_system,
