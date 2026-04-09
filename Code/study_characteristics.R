@@ -24,8 +24,7 @@ library(devtools)
 devtools::install_github("davidsjoberg/ggsankey")
 
 ## Load data
-setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah/Documents/R&D/Industry PhD/Trials/Meta analysis/R_datasets")
-mydata <- read_csv("ulva_meta_analysis_raw_data.csv")
+mydata <- read_csv(here("Data", "ulva_meta_analysis_raw_data.csv"))
 dim(mydata)
 names(mydata)
 
