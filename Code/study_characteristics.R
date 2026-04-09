@@ -356,7 +356,7 @@ print(publication_summary)
 ## Create bubble plot of publication type-year
 # Summarise number of unique studies per publication-year combo
 bubble_data_publication <- mydata %>%
-  distinct(study_ID, publication_year, publication_type) %>%
+  distinct(study_ID, publication_year, publication_type, journal) %>%
   group_by(journal, publication_year, publication_type) %>%
   summarise(unique_study_count = n(), .groups = "drop")
 
