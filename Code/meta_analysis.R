@@ -29,7 +29,7 @@ for (p in packages) {
 
 ###Please download GitHub repository and then run the following
 here()
-clean_data <- read_csv("cleaned_data_for_meta_analysis.csv")
+clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
 head(clean_data)
 
 # Calculate effect size (lnRR) and variance
