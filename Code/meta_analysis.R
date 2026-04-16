@@ -27,7 +27,7 @@ for (p in packages) {
   library(p, character.only = TRUE)
 }
 
-###Please download GitHub repository and then run the following
+### Please download GitHub repository and then run the following
 here()
 clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
 head(clean_data)
@@ -43,6 +43,20 @@ clean_data <- clean_data %>%
 # Reverse the sign of FCR effect size (negative result indicates positive biological improvement)
 clean_data <- clean_data %>%
   mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
+
+# Create check to make sure that direction of lnRR are biologically correct
+clean_data %>%
+  mutate(
+    expected_direction = case_when(
+      outcome == "FCR" ~ control_mean - treatment_mean, 
+      TRUE ~ treatment_mean - control_mean
+    ),
+    consistency = sign(expected_direction) == sign(lnRR)
+  ) %>%
+  group_by(outcome) %>%
+  summarise(
+    agreement = mean(consistency, na.rm = TRUE)
+  )
 
 # Check distribution of effect sizes overall and for each outcome category
 lnRR_feed <- clean_data %>% filter(outcome_category == "feed behaviour")
@@ -100,6 +114,7 @@ VCV <- vcalc(
 # All clean_data (overall model)
 res_3L_all <- rma.mv(yi = lnRR, V = VCV,
                      random = ~ 1 | study_ID / ES_ID,
+                     test = "t",
                      data = clean_data,
                      method = "REML")
 res_3L_all
@@ -131,8 +146,8 @@ run_orchard_plot <- function(model, I2,
                              title = "Orchard Plot",
                              xlab = "Effect Size (lnRR)",
                              x_pos = 0.7,
-                             y_pos = 1.5,
-                             y_limits = c(-2.5, 2.5),
+                             y_pos = 0.5,
+                             y_limits = c(-1.5, 1.5),
                              colour = "grey") {
   
   p <- orchaRd::orchard_plot(
@@ -171,7 +186,7 @@ all_data_plot <- run_orchard_plot(
 )
 
 all_data_plot   # Print orchard plot
-ggsave("all_data_orchard_plot.png", width = 11, height = 8, units = "in")  # Save orchard plot
+ggsave("all_data_orchard_plot.png", width = 9, height = 8, units = "in")  # Save orchard plot
 
 ## Testing effect of species
 # MLMA with species as fixed effect (no intercept)
@@ -180,6 +195,7 @@ res_species_fixed <- rma.mv(
   V    = VCV,
   mods = ~ 0 + species,                    
   random = ~ 1 | study_ID / ES_ID,  
+  test = "t",
   data = clean_data,
   method = "REML"
 )
@@ -193,6 +209,7 @@ V    = VCV,
     ~ 1 | species,                  
     ~ 1 | study_ID / ES_ID 
   ),
+  test = "t",
   data = clean_data,
   method = "REML"
 )
@@ -426,6 +443,7 @@ VCV_sens <- vcalc(
 # Run 3-level meta-analysis
 res_3L_sens <- rma.mv(yi = lnRR, V = VCV_sens,
                      random = ~ 1 | study_ID / ES_ID,
+                     test = "t",
                      data = clean_data_sens,
                      method = "REML")
 res_3L_sens
@@ -464,7 +482,7 @@ sens_data_plot <- run_orchard_plot(
 )
 
 sens_data_plot   # Print orchard plot
-ggsave("sens_data_orchard_plot.png", width = 11, height = 8, units = "in")  # Save orchard plot
+ggsave("sens_data_orchard_plot.png", width = 9, height = 8, units = "in")  # Save orchard plot
 
 # Publication bias with S004 removed
 results_sens_data <- run_bias_models(
@@ -512,6 +530,7 @@ res_meta_reg <- rma.mv(yi = lnRR, V  = VCV,
   mods = ~ 0 + outcome_category,        
   random = list(                
     ~ 1 | study_ID / ES_ID),
+  test = "t",
   data = clean_data,
   method = "REML"
 )
@@ -529,13 +548,14 @@ all_data_mlmr_plot <- run_orchard_plot(
 )
 
 all_data_mlmr_plot
-ggsave("all_data_mlmr_plot.png", dpi = 300, width = 8, height = 6, units = "in")
+ggsave("all_data_mlmr_plot.png", dpi = 300, width = 9, height = 8, units = "in")
 
 # S004 removed
 res_meta_reg_sens <- rma.mv(yi = lnRR, V  = VCV_sens,
   mods = ~ 0 + outcome_category,        
   random = list(                
     ~ 1 | study_ID / ES_ID),
+  test = "t",
   data = clean_data_sens,
   method = "REML"
 )
@@ -553,7 +573,7 @@ sens_mlmr_plot <- run_orchard_plot(
 )
 
 sens_mlmr_plot
-ggsave("sens_mlmr_plot.png", plot = sens_mlmr_plot, dpi = 300, width = 8, height = 6, units = "in")
+ggsave("sens_mlmr_plot.png", plot = sens_mlmr_plot, dpi = 300, width = 9, height = 8, units = "in")
 
 ### Outcome category is a significant moderator
 ## Create sub-groups for each outcome category and run MLMA
@@ -592,6 +612,7 @@ run_mlma <- function(data, outcome_cat, rho = 0.5, random_structure = "~1 | stud
     yi = lnRR,
     V  = V_sub,
     random = as.formula(random_structure),
+    test = "t",
     data = dat_sub,
     method = "REML"
   )
@@ -653,7 +674,7 @@ p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
 p_cont + p_cont_log + plot_layout(guides = 'collect')
 
 # Simple linear model for VIF check
-lm_check <- lm(lnRR ~ study_duration_days + initial_size_g + intervention_dose + I(intervention_dose^2),
+lm_check <- lm(lnRR ~ study_duration_days + initial_size_g + intervention_dose,
                data = clean_data_sens)
 car::vif(lm_check)
 
@@ -663,6 +684,7 @@ car::vif(lm_check)
 # Set fixed effects
 fixed_vars_size <- c("intervention_dose", "initial_size_g", "intervention_dose2")
 fixed_vars_duration <- c("study_duration_days", "intervention_dose", "intervention_dose2")
+fixed_vars_all <- c("study_duration_days", "intervention_dose", "intervention_dose2", "initial_size_g")
 
 # Create function for running MLMR with whole dataset and each outcome category (no intercept model)
 run_mlmr_fe <- function(data, outcome_cat = NULL, fixed_effects = NULL, 
@@ -697,6 +719,7 @@ run_mlmr_fe <- function(data, outcome_cat = NULL, fixed_effects = NULL,
     V = V_sub,
     mods = mods_formula,
     random = as.formula(random_structure),
+    test = "t",
     data = dat_sub,
     method = "REML"
   )
@@ -708,7 +731,7 @@ run_mlmr_fe <- function(data, outcome_cat = NULL, fixed_effects = NULL,
   )
 }
 
-# Run both models and compare
+# Run all three models and compare
 # Size model
 size_MLMR <- run_mlmr_fe(
   data = clean_data_sens,
@@ -723,9 +746,17 @@ duration_MLMR <- run_mlmr_fe(
   fixed_effects = fixed_vars_duration
 )
 
+# All model
+all_MLMR <- run_mlmr_fe(
+  data = clean_data_sens,
+  outcome_cat = NULL,   # overall model
+  fixed_effects = fixed_vars_all
+)
+
 # Inspect results
 summary(size_MLMR$model)
 summary(duration_MLMR$model)
+summary(all_MLMR$model)
 
 ## Dose-response estimates vary between size_MLMR and duration_MLMR BUT dose effects are robust
 # Difference in AIC < 2 between models
@@ -767,6 +798,27 @@ results_mlmr_size$`feed behaviour`$model
 results_mlmr_size$`growth performance`$model
 results_mlmr_size$`nutrient utilisation`$model
 
+## Determining heterogeneity explained by MLMR models
+# Calculate r2 for overall model and sub-group models
+r2_overall  <- r2_ml(results_mlmr_duration$overall$model, 
+                     results_mlma$overall$model)
+
+r2_feed     <- r2_ml(results_mlmr_duration$`feed behaviour`$model, 
+                     results_mlma[["feed behaviour"]]$model)
+
+r2_growth   <- r2_ml(results_mlmr_duration$`growth performance`$model, 
+                     results_mlma[["growth performance"]]$model)
+
+r2_nutrient <- r2_ml(results_mlmr_duration$`nutrient utilisation`$model, 
+                     results_mlma[["nutrient utilisation"]]$model)
+
+# Print results
+
+cat("R2 Overall:              ", r2_overall, "\n")
+cat("R2 Feed behaviour:       ", r2_feed, "\n")
+cat("R2 Growth performance:   ", r2_growth, "\n")
+cat("R2 Nutrient utilisation: ", r2_nutrient, "\n")
+
 ## Again, dose-response estimates vary between size_MLMR and duration_MLMR BUT dose effects are robust regardless of if initial_size_g or study duration is included as a fixed effect
 
 ## Plot the relationship between Ulva dose and effect size (lnRR)
@@ -803,5 +855,5 @@ ulva_dose <- bubble_plot(res_meta_dose,
 # Print plot
 ulva_dose
 
-# Save ulva_dose_pot
+# Save ulva_dose_plot
 ggsave("ulva_dose_relationship.png", width = 8, height = 6, units = "in") 
