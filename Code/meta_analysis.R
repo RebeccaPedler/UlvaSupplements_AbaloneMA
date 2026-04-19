@@ -166,23 +166,21 @@ run_orchard_plot <- function(model, I2,
       ),
       color = "black",
       parse = TRUE,
-      size = 4
+      size = 4,
+      face = "bold"
     ) +
     
     ggtitle(title) +
-    theme(plot.title = element_text(face = "bold")) +
     scale_fill_manual(values = colour) +
     scale_colour_manual(values = colour) +
     scale_y_continuous(limits = y_limits)
-  
-  return(p)
+    return(p)
 }
 
 # Create orchard plot for all clean_data
 all_data_plot <- run_orchard_plot(
   model = res_3L_all,
   I2 = I2_all,
-  title = "A) All Outcome Categories"
 )
 
 all_data_plot   # Print orchard plot
@@ -201,6 +199,10 @@ res_species_fixed <- rma.mv(
 )
 summary(res_species_fixed)
 
+# Calculate R² (variance explained by species as moderator)
+r2_res_species_fixed <- r2_ml(res_species_fixed, res_3L_all)
+cat("R2 (Meta-regression vs base model): ", r2_res_species_fixed, "\n")
+
 # MLMA with species as random effect
 res_species_random <- rma.mv(
 yi   = lnRR,
@@ -215,6 +217,24 @@ V    = VCV,
 )
 summary(res_species_random)
 
+## Create function for extracting variance components
+calc_I2_4level <- function(model) {
+  sigma <- model$sigma2
+  mean_vi <- mean(diag(model$V), na.rm = TRUE)
+  total_var <- sum(sigma) + mean_vi
+  
+  data.frame(
+    I2_species = sigma[1] / total_var * 100,
+    I2_study   = sigma[2] / total_var * 100,
+    I2_ES      = sigma[3] / total_var * 100,
+    I2_total   = sum(sigma) / total_var * 100
+  )
+}
+
+# Extract variance components for res_species_random
+I2_species_model <- calc_I2_4level(res_species_random)
+print(I2_species_model)
+
 # Compare models
 anova(res_3L_all, res_species_random)
 
@@ -222,7 +242,7 @@ anova(res_3L_all, res_species_random)
 
 ## Publication bias
 
-#Function for publication bias models and plots
+# Function for publication bias models and plots
 run_bias_models <- function(data, 
                              yi = "lnRR",
                              vi = "vi_lnRR",
@@ -300,20 +320,20 @@ run_bias_models <- function(data,
                          group = study_id,
                          xlab  = "Square root of inverse effective sample size",
                          ylab = "Effect size (lnRR)")
-  
+ 
   p_year <- bubble_plot(year_mod,
                         mod   = year_var,
                         group = study_id,
                         xlab  = "Publication year",
                         ylab = "Effect size (lnRR)")
-  
+
   if (!is.null(multi_mod)) {
     p_multi_egger <- bubble_plot(multi_mod,
                                  mod   = "sqrt_inv_e_n",
                                  group = study_id,
                                  xlab  = "Square root of inverse effective sample size",                                                         
                                  ylab = "Effect size (lnRR)")
-    
+  
     p_multi_year <- bubble_plot(multi_mod,
                                 mod   = year_var,
                                 group = study_id,
@@ -363,27 +383,36 @@ ggsave("plot_multi_egger.png", plot = results_all_data$plot_multi_egger, dpi = 3
 results_all_data$plot_multi_year
 ggsave("plot_multi_year.png", plot = results_all_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
 
-# Print funnel plot
-funnel(res_3L_all, yaxis = "seinv", 
-      xlab = "Standarised residuals",
-      ylab = "Precision (inverse of SE)",
-      # xlim = c(-4.0, 4.5), 
-      # ylim = c(0.01, 60.0),
-      col = c(alpha("black", 0.5)),
-      cex = 1.0) 
+# Create stacked plot
+combined_plot <- results_all_data$plot_egger + results_all_data$plot_year +
+  plot_annotation(
+    tag_levels = list(c("A)", "B)")),
+    theme = theme(
+      plot.tag = element_text(face = "bold")
+    )
+  )
 
-ggsave("funnel_all_data.png", dpi = 300, width = 8, height = 6, units = "in")
+combined_plot
+ggsave("combined.plot.png", plot = combined_plot, dpi = 300, width = 16, height = 8, units = "in")
 
-## Testing if outcome category is a significant moderator
-res_outcome_fixed <- rma.mv(
-  yi   = lnRR,
-  V    = VCV,
-  mods = ~ 0 + outcome_category,                    
-  random = ~ 1 | study_ID / ES_ID,  
-  data = clean_data,
-  method = "REML"
-)
-summary(res_outcome_fixed)
+# Create funnel plot
+png("funnel_plot_all.png", width = 8, height = 6, units = "in", res = 600)
+
+funnel_plot_all <- funnel(res_3L_all, 
+                          yaxis = "seinv", 
+                          xlab = "Standardised residuals (lnRR)",
+                          ylab = "Precision (inverse of SE)",
+                          col = c(alpha("black", 0.5)),
+                          cex = 1.0,                          
+                          grid = FALSE,
+                          xaxt = "n",
+                          yaxt = "n",
+                          font.lab = 1) 
+
+axis(1, at = axTicks(1), labels = formatC(axTicks(1), digits = 1, format = "f"))
+axis(2, at = axTicks(2), labels = formatC(axTicks(2), digits = 1, format = "f"))
+
+dev.off()
 
 ### Sensitivity analysis
 # Leave-one-out sensitivity analysis with VCV subsetting
@@ -512,15 +541,36 @@ ggsave("plot_multi_egger_sens.png", plot = results_sens_data$plot_multi_egger_se
 results_all_data$plot_multi_year
 ggsave("plot_multi_year_sens.png", plot = results_sens_data$plot_multi_year_sens, dpi = 300, width = 8, height = 6, units = "in")
 
+# Create stacked plot
+combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year +
+  plot_annotation(
+    tag_levels = list(c("A)", "B)")),
+    theme = theme(
+      plot.tag = element_text(face = "bold")
+    )
+  )
+
+combined_plot_sens
+ggsave("combined.plot_sens.png", plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
+
 # Create funnel plot with S004 excluded
-funnel(res_3L_sens, yaxis = "seinv", 
-      xlab = "Standarised residuals",
-      ylab = "Precision (inverse of SE)",
-      # xlim = c(-4.0, 4.5), 
-      # ylim = c(0.01, 60.0),
-      col = c(alpha("black", 0.5)),
-      cex = 1.0) 
-ggsave("funnel_sens.png", dpi = 300, width = 8, height = 6, units = "in")
+png("funnel_plot_sens.png", width = 8, height = 6, units = "in", res = 600)
+
+funnel_plot_sens <- funnel(res_3L_sens, 
+                          yaxis = "seinv", 
+                          xlab = "Standardised residuals (lnRR)",
+                          ylab = "Precision (inverse of SE)",
+                          col = c(alpha("black", 0.5)),
+                          cex = 1.0,                          
+                          grid = FALSE,
+                          xaxt = "n",
+                          yaxt = "n",
+                          font.lab = 1) 
+
+axis(1, at = axTicks(1), labels = formatC(axTicks(1), digits = 1, format = "f"))
+axis(2, at = axTicks(2), labels = formatC(axTicks(2), digits = 1, format = "f"))
+
+dev.off()
 
 ## Test effect of outcome_category as moderator by running MLMR with OC as fixed effect (for both full dataset and with S004 removed)
 # Run MLMR (no intercept model)
@@ -536,6 +586,10 @@ res_meta_reg <- rma.mv(yi = lnRR, V  = VCV,
 )
 res_meta_reg
 
+# Calculate R² (variance explained by outcome as moderator)
+r2_meta_reg <- r2_ml(res_meta_reg, res_3L_all)
+cat("R2 (Meta-regression vs base model): ", r2_meta_reg, "\n")
+
 # Extract variance components for res_meta_reg_sens
 I2_sens_all_data_mlmr <- calc_I2_3level(res_meta_reg)
 print(I2_sens_all_data_mlmr)
@@ -548,7 +602,7 @@ all_data_mlmr_plot <- run_orchard_plot(
 )
 
 all_data_mlmr_plot
-ggsave("all_data_mlmr_plot.png", dpi = 300, width = 9, height = 8, units = "in")
+ggsave("all_data_mlmr_plot.png", dpi = 500, width = 9, height = 8, units = "in")
 
 # S004 removed
 res_meta_reg_sens <- rma.mv(yi = lnRR, V  = VCV_sens,
@@ -758,6 +812,18 @@ summary(size_MLMR$model)
 summary(duration_MLMR$model)
 summary(all_MLMR$model)
 
+## Determining heterogeneity explained by MLMR models
+r2_size_all <- r2_ml(size_MLMR$model, res_3L_all)
+
+r2_duration_all <- r2_ml(duration_MLMR$model, res_3L_all)
+
+r2_combined_all <- r2_ml(all_MLMR$model, res_3L_all)
+
+# Print results
+cat("R2 size MLMR:        ", r2_size_all, "\n")
+cat("R2 duration MLMR:    ", r2_duration_all, "\n")
+cat("R2 combined MLMR:    ", r2_combined_all, "\n")
+
 ## Dose-response estimates vary between size_MLMR and duration_MLMR BUT dose effects are robust
 # Difference in AIC < 2 between models
 # Inspect in MLMR for each individual subgroup
@@ -798,27 +864,6 @@ results_mlmr_size$`feed behaviour`$model
 results_mlmr_size$`growth performance`$model
 results_mlmr_size$`nutrient utilisation`$model
 
-## Determining heterogeneity explained by MLMR models
-# Calculate r2 for overall model and sub-group models
-r2_overall  <- r2_ml(results_mlmr_duration$overall$model, 
-                     results_mlma$overall$model)
-
-r2_feed     <- r2_ml(results_mlmr_duration$`feed behaviour`$model, 
-                     results_mlma[["feed behaviour"]]$model)
-
-r2_growth   <- r2_ml(results_mlmr_duration$`growth performance`$model, 
-                     results_mlma[["growth performance"]]$model)
-
-r2_nutrient <- r2_ml(results_mlmr_duration$`nutrient utilisation`$model, 
-                     results_mlma[["nutrient utilisation"]]$model)
-
-# Print results
-
-cat("R2 Overall:              ", r2_overall, "\n")
-cat("R2 Feed behaviour:       ", r2_feed, "\n")
-cat("R2 Growth performance:   ", r2_growth, "\n")
-cat("R2 Nutrient utilisation: ", r2_nutrient, "\n")
-
 ## Again, dose-response estimates vary between size_MLMR and duration_MLMR BUT dose effects are robust regardless of if initial_size_g or study duration is included as a fixed effect
 
 ## Plot the relationship between Ulva dose and effect size (lnRR)
@@ -833,27 +878,25 @@ res_meta_dose <- rma.mv(yi = lnRR, V  = VCV_sens,
 res_meta_dose
 
 # Create plot
-ulva_dose <- bubble_plot(res_meta_dose,           
-                  mod = "intervention_dose", 
-                  group = "study_ID",       
-                  xlab = "Ulva dose (% w/w)", 
+ulva_inclusion <- bubble_plot(res_meta_dose,
+                  mod = "intervention_dose",
+                  group = "study_ID",
+                  xlab = expression(italic(Ulva) ~ "inclusion level (% w/w)"),
                   ylab = "Effect size (lnRR)",
                   est.lwd = 1.2,
                   est.col = "deeppink3") +
-       scale_x_continuous(breaks = seq(min(clean_data_sens$intervention_dose),
-                                       max(clean_data_sens$intervention_dose),
-                                       length.out = 6)) +
-       scale_y_continuous(breaks = seq(floor(min(clean_data_sens$lnRR)),
-                                       ceiling(max(clean_data_sens$lnRR)), 1)) +
-       theme_minimal() +
-       theme(
-         panel.grid.major = element_blank(),  
-         panel.grid.minor = element_blank(), 
-         axis.line = element_line(color = "black")  
-       )
+  scale_x_continuous(breaks = seq(0, 30, by = 5), limits = c(0, 30)) +
+  scale_y_continuous(breaks = seq(floor(min(clean_data_sens$lnRR)),
+                                   ceiling(max(clean_data_sens$lnRR)), 0.5)) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "black"),
+  )
 
 # Print plot
-ulva_dose
+ulva_inclusion
 
 # Save ulva_dose_plot
-ggsave("ulva_dose_relationship.png", width = 8, height = 6, units = "in") 
+ggsave("ulva_inclusion_relationship.png", width = 10, height = 6, units = "in") 
