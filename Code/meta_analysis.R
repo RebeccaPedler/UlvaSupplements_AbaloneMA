@@ -530,16 +530,16 @@ summary(results_sens_data$multi_model)
 
 # Print and save plots (all data)
 results_sens_data$plot_egger 
-ggsave("plot_egger_sens.png", plot = results_sens_data$plot_egger_sens, dpi = 300, width = 8, height = 6, units = "in")
+ggsave("plot_egger_sens.png", plot = results_sens_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
 
-results_all_data$plot_year
-ggsave("plot_year_sens.png", plot = results_sens_data$plot_year_sens, dpi = 300, width = 8, height = 6, units = "in")
+results_sens_data$plot_year
+ggsave("plot_year_sens.png", plot = results_sens_data$plot_year, dpi = 300, width = 8, height = 6, units = "in")
 
-results_all_data$plot_multi_egger
-ggsave("plot_multi_egger_sens.png", plot = results_sens_data$plot_multi_egger_sens, dpi = 300, width = 8, height = 6, units = "in")
+results_sens_data$plot_multi_egger
+ggsave("plot_multi_egger_sens.png", plot = results_sens_data$plot_multi_egger, dpi = 300, width = 8, height = 6, units = "in")
 
-results_all_data$plot_multi_year
-ggsave("plot_multi_year_sens.png", plot = results_sens_data$plot_multi_year_sens, dpi = 300, width = 8, height = 6, units = "in")
+results_sens_data$plot_multi_year
+ggsave("plot_multi_year_sens.png", plot = results_sens_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
 
 # Create stacked plot
 combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year +
@@ -813,11 +813,11 @@ summary(duration_MLMR$model)
 summary(all_MLMR$model)
 
 ## Determining heterogeneity explained by MLMR models
-r2_size_all <- r2_ml(size_MLMR$model, res_3L_all)
+r2_size_all <- r2_ml(size_MLMR$model, res_3L_sens)
 
-r2_duration_all <- r2_ml(duration_MLMR$model, res_3L_all)
+r2_duration_all <- r2_ml(duration_MLMR$model, res_3L_sens)
 
-r2_combined_all <- r2_ml(all_MLMR$model, res_3L_all)
+r2_combined_all <- r2_ml(all_MLMR$model, res_3L_sens)
 
 # Print results
 cat("R2 size MLMR:        ", r2_size_all, "\n")
