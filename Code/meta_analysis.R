@@ -640,6 +640,12 @@ clean_data_sens_growth <- clean_data_sens %>%
 clean_data_sens_nutr <- clean_data_sens %>%
      filter(outcome_category == "nutrient utilisation")    # Nutrient utilisation dataset
 
+    # Check direction of effect sizes for nutrient utilisation outcomes
+clean_data_sens %>%
+  filter(outcome_category == "nutrient utilisation") %>%
+  select(lnRR, control_mean, treatment_mean, outcome_long) %>%
+  print(n = 55)
+
 # Create function for subgroup MLMA and loop through outcome categories
 run_mlma <- function(data, outcome_cat, rho = 0.5, random_structure = "~1 | study_ID/ES_ID") {
   
