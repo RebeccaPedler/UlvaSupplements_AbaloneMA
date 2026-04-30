@@ -5,7 +5,7 @@
 ## Working with the raw data for meta-analysis - main data set.
 
 ## Install packages
-# install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
 
 ## Load required libraries
 library(dplyr)
