@@ -184,13 +184,19 @@ bubble_data <- mydata %>%
     .groups = "drop"
   )
 
+# Replace _ in species names
+bubble_data$species <- gsub("_x_", " × ", mydata$species)
+
+# Check unique species names
+unique(bubble_data$species)
+
 # Explicitly order species factor levels
 species_order <- c(
   "H. laevigata",
-  "H. laevigata x H. rubra",
+  "H. laevigata × H. rubra",
   "H. discus hannai",
   "H. midae",  
-  "H. laevigata and H. laevigata x H. rubra",
+  "H. laevigata and H. laevigata × H. rubra",
   "H. asinina"
 )
 
@@ -198,6 +204,9 @@ bubble_data <- bubble_data %>%
   mutate(
     species = factor(species, levels = species_order)
   )
+
+# Check species names 
+unique(bubble_data$species)
 
 # Replace " x " and " and " with line breaks for multi-line labels
 bubble_data <- bubble_data %>%
@@ -268,7 +277,7 @@ bubble_plot_species <- ggplot(
 ## Show the plot:
 bubble_plot_species
 #Save plot
-ggsave("bubble_plot_species.png", width = 12, height = 9, units = "in")
+ggsave(here("Figures", "bubble_plot_species.png"), width = 12, height = 9, units = "in")
 
 ## Recode country names to match rnaturalearth conventions
 mydata <- mydata %>%
@@ -296,7 +305,6 @@ country_summary <- mydata %>%
   ) %>%
   rename(name = country_standardised)
 print(country_summary)
-
 
 ## Get world map shapefile for plotting and remove Antarctica:
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -331,7 +339,7 @@ world_map <- ggplot(world_data) +
 ## Display the plot:
 world_map
 # Save map
-ggsave("world_map.png", width = 10, height = 5, units = "in")
+ggsave(here("Figures","world_map.png"), width = 10, height = 5, units = "in")
 
 # # Combine side by side with one shared legend = NOT YET (also it should be vertical not horizontal)
 # species_and_map_combined <- bubble_plot_species + world_map +
@@ -414,8 +422,7 @@ journal_year <- ggplot(
   )
 
 journal_year  #Print plot
-setwd("C:/Users/RebeccaPedler/OneDrive - Yumbah")
-ggsave("journal_year.png", width = 13, height = 11, units = "in")   #Save bubble plot
+ggsave(here("Figures","journal_year.png"), width = 13, height = 11, units = "in")   
 
 ### Check study validity metrics (study-level variables)
 
@@ -1302,7 +1309,7 @@ sankey_plot <- ggplot(
 # View plot 
 sankey_plot
 #Save plot
-ggsave("Sankey_plot.png", width = 20, height = 10, units = "in")
+ggsave(here("Figures","Sankey_plot.png"), width = 20, height = 10, units = "in")
 
 ## Check and fix proportional_data column based on units:
 ## In mydata$units raplace "au" with "arbitrary unts":
