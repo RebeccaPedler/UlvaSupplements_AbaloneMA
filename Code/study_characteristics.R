@@ -185,7 +185,7 @@ bubble_data <- mydata %>%
   )
 
 # Replace _ in species names
-bubble_data$species <- gsub("_x_", " × ", mydata$species)
+bubble_data$species <- gsub("_x_", " × ", bubble_data$species)
 
 # Check unique species names
 unique(bubble_data$species)
@@ -277,7 +277,7 @@ bubble_plot_species <- ggplot(
 ## Show the plot:
 bubble_plot_species
 #Save plot
-ggsave(here("Figures", "bubble_plot_species.png"), width = 12, height = 9, units = "in")
+ggsave(here("Figures", "bubble_plot_species.png"), width = 16, height = 9, units = "in")
 
 ## Recode country names to match rnaturalearth conventions
 mydata <- mydata %>%
