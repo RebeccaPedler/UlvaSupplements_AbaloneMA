@@ -53,16 +53,21 @@ clean_data <- clean_data %>%
 clean_data <- clean_data %>%
   mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
 
+# Calculate quadratic Ulva inclusion level
+clean_data$intervention_dose2 <- clean_data$intervention_dose^2
+
 # Preserve relevant un-scaled moderators 
 clean_data$intervention_dose_raw <- clean_data$intervention_dose  
 clean_data$study_duration_days_raw <- clean_data$study_duration_days
 clean_data$initial_size_g_raw <- clean_data$initial_size_g
+clean_data$intervention_dose2_raw <- clean_data$intervention_dose^2
 
 # Scale continious moderators
 clean_data$publication_year <- as.numeric(scale(clean_data$publication_year))
 clean_data$intervention_dose <- as.numeric(scale(clean_data$intervention_dose))
 clean_data$study_duration_days <- as.numeric(scale(clean_data$study_duration_days))
 clean_data$initial_size_g <- as.numeric(scale(clean_data$initial_size_g))
+clean_data$intervention_dose2 <- as.numeric(scale(clean_data$intervention_dose2))
 
 # Create check to make sure that direction of lnRR are biologically correct
 clean_data %>%
@@ -460,13 +465,11 @@ clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 clean_data_sens$intervention_dose_raw <- clean_data_sens$intervention_dose  
 
 # Rescale continious moderators in sensitive dataset 
-clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year))
-clean_data_sens$intervention_dose <- as.numeric(scale(clean_data_sens$intervention_dose))
-clean_data_sens$study_duration_days <- as.numeric(scale(clean_data_sens$study_duration_days))
-clean_data_sens$initial_size_g <- as.numeric(scale(clean_data_sens$initial_size_g))
-
-# Re-create quadratic dose term
-clean_data_sens$intervention_dose2 <- clean_data_sens$intervention_dose^2
+clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year_raw))
+clean_data_sens$intervention_dose <- as.numeric(scale(clean_data_sens$intervention_dose_raw))
+clean_data_sens$intervention_dose2 <- as.numeric(scale(clean_data_sens$intervention_dose2_raw))
+clean_data_sens$study_duration_days <- as.numeric(scale(clean_data_sens$study_duration_days_raw))
+clean_data_sens$initial_size_g <- as.numeric(scale(clean_data_sens$initial_size_g_raw))
 
 # VCV for sensitive dataset
 VCV_sens <- vcalc(
@@ -906,19 +909,7 @@ results_mlmr_size$`feed behaviour`$model
 results_mlmr_size$`growth performance`$model
 results_mlmr_size$`nutrient utilisation`$model
 
-# Dose-response bubble plot
-# Univariate MLMR using quadratic + linear dose terms (with intercept)
-res_meta_dose <- rma.mv(yi = lnRR, V = VCV_sens,
-  mods   = ~ intervention_dose + I(intervention_dose^2),
-  random = list(~ 1 | study_ID / ES_ID),
-  test   = "t",
-  data   = clean_data_sens,
-  method = "REML"
-)
-res_meta_dose
-
 # Bubble plot — Ulva inclusion level vs effect size
-
 # Run MLMR with unscaled Ulva inclusion level 
 res_meta_dose_plot <- rma.mv(yi = lnRR, V = VCV_sens,
   mods   = ~ intervention_dose_raw + I(intervention_dose_raw^2),
