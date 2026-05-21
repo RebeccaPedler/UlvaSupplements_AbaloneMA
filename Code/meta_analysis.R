@@ -448,6 +448,9 @@ print(sensitivity_results_VCV)
 
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 
+# Preserve Ulva dose prior to scaling (for plotting later on)
+clean_data_sens$intervention_dose_raw <- clean_data_sens$intervention_dose_raw  
+
 # Rescale continious moderators in sensitive dataset 
 clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year))
 clean_data_sens$intervention_dose <- as.numeric(scale(clean_data_sens$intervention_dose))
@@ -908,7 +911,7 @@ res_meta_dose
 
 # Bubble plot — Ulva inclusion level vs effect size
 ulva_inclusion <- bubble_plot(res_meta_dose,
-                  mod      = "intervention_dose",
+                  mod      = "intervention_dose_raw",
                   group    = "study_ID",
                   xlab     = expression(italic(Ulva) ~ "inclusion level (% w/w)"),
                   ylab     = "Effect size (lnRR)",
