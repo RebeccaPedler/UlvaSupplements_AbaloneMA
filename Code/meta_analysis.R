@@ -57,6 +57,7 @@ clean_data <- clean_data %>%
 clean_data$intervention_dose2 <- clean_data$intervention_dose^2
 
 # Preserve relevant un-scaled moderators 
+clean_data$publication_year_raw <- clean_data$publication_year
 clean_data$intervention_dose_raw <- clean_data$intervention_dose  
 clean_data$study_duration_days_raw <- clean_data$study_duration_days
 clean_data$initial_size_g_raw <- clean_data$initial_size_g
@@ -363,9 +364,6 @@ run_bias_models <- function(data,
   )
 }
 
-# Create quadratic dose term for publication bias models
-clean_data$intervention_dose2 <- clean_data$intervention_dose^2
-
 # Run publication bias models — full dataset
 results_all_data <- run_bias_models(
   data           = clean_data,
@@ -459,10 +457,8 @@ print(sensitivity_results_VCV)
 # Author (D. Francis) noted poor performance was linked to poor diet stability
 # Re-run MLMA without S004
 
+# Create filtered dataset
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
-
-# Preserve Ulva dose prior to scaling (for plotting later on)
-clean_data_sens$intervention_dose_raw <- clean_data_sens$intervention_dose  
 
 # Rescale continious moderators in sensitive dataset 
 clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year_raw))
@@ -680,6 +676,7 @@ res_meta_reg_sens_contrasts <- rma.mv(yi = lnRR, V = VCV_sens,
   method = "REML"
 )
 res_meta_reg_sens_contrasts
+
 # Intercept                              = feed behaviour estimate
 # outcome_categorygrowth performance     = growth vs feed behaviour
 # outcome_categorynutrient utilisation   = nutrient utilisation vs feed behaviour
