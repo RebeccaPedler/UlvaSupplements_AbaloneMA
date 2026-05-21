@@ -53,10 +53,8 @@ clean_data <- clean_data %>%
 clean_data <- clean_data %>%
   mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
 
-# Scale publication year, Ulva inclusion level and study duration
+# Scale publication year
 clean_data$publication_year <- as.numeric(scale(clean_data$publication_year))
-clean_data$intervention_dose <- as.numeric(scale(clean_data$intervention_dose))
-clean_data$study_duration_days <- as.numeric(scale(clean_data$study_duration_days))
 
 # Create check to make sure that direction of lnRR are biologically correct
 clean_data %>%
@@ -450,7 +448,13 @@ print(sensitivity_results_VCV)
 
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 
-# Create quadratic dose term for sensitive dataset
+# Rescale continious moderators in sensitive dataset 
+clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year))
+clean_data_sens$intervention_dose <- as.numeric(scale(clean_data_sens$intervention_dose))
+clean_data_sens$study_duration_days <- as.numeric(scale(clean_data_sens$study_duration_days))
+clean_data_sens$initial_size_g <- as.numeric(scale(clean_data_sens$initial_size_g))
+
+# Re-create quadratic dose term
 clean_data_sens$intervention_dose2 <- clean_data_sens$intervention_dose^2
 
 # VCV for sensitive dataset
