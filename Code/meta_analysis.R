@@ -784,7 +784,7 @@ I2_results_subgroups
 # Moderator collinearity check 
 corr_cont <- round(
   cor(clean_data_sens[, c("intervention_dose_raw", "study_duration_days_raw",
-                          "initial_size_g_raw", "intervention_dose2_raw")]), 2)
+                          "initial_size_g_raw")]), 2)
 
 p_cont <- ggcorrplot(corr_cont, hc.order = TRUE, lab = TRUE,
                      outline.col = "white",
@@ -793,7 +793,7 @@ p_cont <- ggcorrplot(corr_cont, hc.order = TRUE, lab = TRUE,
 
 corr_cont_log <- round(
   cor(log(clean_data_sens[, c("intervention_dose_raw", "study_duration_days_raw",
-                              "initial_size_g_raw", "intervention_dose2_raw")])), 2)
+                              "initial_size_g_raw")])), 2)
 
 p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
                          outline.col = "white",
