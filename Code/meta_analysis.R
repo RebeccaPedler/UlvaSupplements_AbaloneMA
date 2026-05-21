@@ -53,8 +53,10 @@ clean_data <- clean_data %>%
 clean_data <- clean_data %>%
   mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
 
-# Scale publication year 
-clean_data$publication_year_scaled <- as.numeric(scale(clean_data$publication_year))
+# Scale publication year, Ulva inclusion level and study duration
+clean_data$publication_year <- as.numeric(scale(clean_data$publication_year))
+clean_data$intervention_dose <- as.numeric(scale(clean_data$intervention_dose))
+clean_data$study_duration_days <- as.numeric(scale(clean_data$study_duration_days))
 
 # Create check to make sure that direction of lnRR are biologically correct
 clean_data %>%
@@ -243,8 +245,6 @@ anova(res_3L_all, res_species_random)
 #### Adding species as a random effect does not improve model fit; continue without
 
 # Publication bias function
-
-# year_var should be the SCALED publication year column (publication_year_scaled)to ensure the intercept is interpretable at the mean publication year.
 run_bias_models <- function(data, 
                              yi = "lnRR",
                              vi = "vi_lnRR",
@@ -253,7 +253,7 @@ run_bias_models <- function(data,
                              es_id = "ES_ID",
                              n_treatment = "treatment_n",
                              n_control = "control_n",
-                             year_var = "publication_year_scaled",
+                             year_var = "publication_year",
                              bio_moderators = NULL) {
   
   # Compute sqrt_inv_e_n
@@ -280,7 +280,7 @@ run_bias_models <- function(data,
     data   = data
   )
   
-  # Decline effect — uses scaled year and VCV
+  # Decline effect 
   year_formula <- as.formula(paste0("~ 1 + ", year_var))
   
   year_mod <- rma.mv(
@@ -356,11 +356,10 @@ run_bias_models <- function(data,
 clean_data$intervention_dose2 <- clean_data$intervention_dose^2
 
 # Run publication bias models — full dataset
-# Note: year_var defaults to "publication_year_scaled" inside the function
 results_all_data <- run_bias_models(
   data           = clean_data,
   vcv            = VCV,
-  year_var       = "publication_year_scaled",
+  year_var       = "publication_year",
   bio_moderators = c("intervention_dose",
                      "intervention_dose2",
                      "study_duration_days")
@@ -451,9 +450,6 @@ print(sensitivity_results_VCV)
 
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 
-# Scale publication year for sensitive dataset
-clean_data_sens$publication_year_scaled <- as.numeric(scale(clean_data_sens$publication_year))
-
 # Create quadratic dose term for sensitive dataset
 clean_data_sens$intervention_dose2 <- clean_data_sens$intervention_dose^2
 
@@ -512,7 +508,7 @@ ggsave(here("Figures", "sens_data_orchard_plot.png"), width = 9, height = 8, uni
 results_sens_data <- run_bias_models(
   data           = clean_data_sens,
   vcv            = VCV_sens,
-  year_var       = "publication_year_scaled",
+  year_var       = "publication_year",
   bio_moderators = c("intervention_dose",
                      "intervention_dose2",
                      "study_duration_days")
