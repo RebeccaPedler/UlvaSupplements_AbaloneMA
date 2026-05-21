@@ -53,8 +53,16 @@ clean_data <- clean_data %>%
 clean_data <- clean_data %>%
   mutate(lnRR = ifelse(outcome == "FCR", -lnRR, lnRR))
 
-# Scale publication year
+# Preserve relevant un-scaled moderators 
+clean_data$intervention_dose_raw <- clean_data$intervention_dose  
+clean_data$study_duration_days_raw <- clean_data$study_duration_days
+clean_data$initial_size_g_raw <- clean_data$initial_size_g
+
+# Scale continious moderators
 clean_data$publication_year <- as.numeric(scale(clean_data$publication_year))
+clean_data$intervention_dose <- as.numeric(scale(clean_data$intervention_dose))
+clean_data$study_duration_days <- as.numeric(scale(clean_data$study_duration_days))
+clean_data$initial_size_g <- as.numeric(scale(clean_data$initial_size_g))
 
 # Create check to make sure that direction of lnRR are biologically correct
 clean_data %>%
@@ -449,7 +457,7 @@ print(sensitivity_results_VCV)
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 
 # Preserve Ulva dose prior to scaling (for plotting later on)
-clean_data_sens$intervention_dose_raw <- clean_data_sens$intervention_dose_raw  
+clean_data_sens$intervention_dose_raw <- clean_data_sens$intervention_dose  
 
 # Rescale continious moderators in sensitive dataset 
 clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year))
@@ -775,8 +783,8 @@ I2_results_subgroups
 
 # Moderator collinearity check 
 corr_cont <- round(
-  cor(clean_data_sens[, c("intervention_dose", "study_duration_days",
-                          "initial_size_g", "intervention_dose2")]), 2)
+  cor(clean_data_sens[, c("intervention_dose_raw", "study_duration_days_raw",
+                          "initial_size_g_raw", "intervention_dose2_raw")]), 2)
 
 p_cont <- ggcorrplot(corr_cont, hc.order = TRUE, lab = TRUE,
                      outline.col = "white",
@@ -784,8 +792,8 @@ p_cont <- ggcorrplot(corr_cont, hc.order = TRUE, lab = TRUE,
                      title = "(a) Continuous variables")
 
 corr_cont_log <- round(
-  cor(log(clean_data_sens[, c("intervention_dose", "study_duration_days",
-                              "initial_size_g", "intervention_dose2")])), 2)
+  cor(log(clean_data_sens[, c("intervention_dose_raw", "study_duration_days_raw",
+                              "initial_size_g_raw", "intervention_dose2_raw")])), 2)
 
 p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
                          outline.col = "white",
@@ -795,7 +803,7 @@ p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
 p_cont + p_cont_log + plot_layout(guides = "collect")
 
 # VIF check
-lm_check <- lm(lnRR ~ study_duration_days + initial_size_g + intervention_dose,
+lm_check <- lm(lnRR ~ study_duration_days_raw + initial_size_g_raw + intervention_dose_raw,
                data = clean_data_sens)
 car::vif(lm_check)
 
@@ -910,7 +918,18 @@ res_meta_dose <- rma.mv(yi = lnRR, V = VCV_sens,
 res_meta_dose
 
 # Bubble plot — Ulva inclusion level vs effect size
-ulva_inclusion <- bubble_plot(res_meta_dose,
+
+# Run MLMR with unscaled Ulva inclusion level 
+res_meta_dose_plot <- rma.mv(yi = lnRR, V = VCV_sens,
+  mods   = ~ intervention_dose_raw + I(intervention_dose_raw^2),
+  random = list(~ 1 | study_ID / ES_ID),
+  test   = "t",
+  data   = clean_data_sens,
+  method = "REML"
+)
+
+# Plot
+ulva_inclusion <- bubble_plot(res_meta_dose_plot,
                   mod      = "intervention_dose_raw",
                   group    = "study_ID",
                   xlab     = expression(italic(Ulva) ~ "inclusion level (% w/w)"),
