@@ -41,6 +41,8 @@ here()
 clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
 head(clean_data)
 
+### Prepare data for modelling
+
 # Calculate effect size (lnRR) and variance
 clean_data <- clean_data %>%
   mutate(
@@ -125,6 +127,34 @@ clean_data %>%
          treatment_n, control_n,
          lnRR, vi_lnRR) %>%
   head(5) # Flag S004.11, S001.18, S006.23, S006.26, S008.3 for sensitivity analysis
+
+# Nutrient utilisation effect sizes are bimodal - Is this being driven by a particular outcome?
+
+nutr_sens <- clean_data %>% filter(outcome_category == "nutrient utilisation")
+
+ggplot(nutr_sens, aes(x = lnRR, y = reorder(outcome_long, lnRR, median), 
+                      colour = outcome_long)) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+  geom_jitter(height = 0.15, size = 2.5, alpha = 0.7) +
+  stat_summary(fun = median, geom = "point", shape = 18, 
+               size = 4, colour = "black") +
+  labs(x = "Effect size (lnRR)",
+       y = NULL,
+       title = "Nutrient utilisation outcomes") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        panel.grid.major.y = element_line(colour = "grey90"),
+        panel.grid.major.x = element_blank(),
+        axis.line.x = element_line(colour = "black"))
+
+# Respirometer measurements neutral-positive, FCR and PER both negative and positive, PD and ED only negative
+# See what studies are contributing what outcomes - e.g. is this a study-level or just outcome difference
+clean_data %>%
+  filter(outcome_category == "nutrient utilisation") %>%
+  group_by(study_ID, short_citation, outcome, outcome_long) %>%
+  summarise(k = n(), mean_lnRR = round(mean(lnRR), 3), .groups = "drop") %>%
+  arrange(outcome, study_ID) %>%
+  print(n = 20)
 
 # Many ES_ID compare to the same control (e.g., S001 compares three different Ulva doses to the same 0% control)
 # Calculate variance covariance (VCV) matrix to account for this
@@ -254,7 +284,7 @@ print(I2_species_model)
 # Compare models — species random effect does not improve fit
 anova(res_3L_all, res_species_random)
 
-#### Adding species as a random effect does not improve model fit; continue without
+### Adding species as a random effect does not improve model fit; continue without
 
 # Publication bias function
 run_bias_models <- function(data, 
@@ -422,7 +452,7 @@ axis(1, at = axTicks(1), labels = formatC(axTicks(1), digits = 1, format = "f"))
 axis(2, at = axTicks(2), labels = formatC(axTicks(2), digits = 1, format = "f"))
 dev.off()
 
-# Sensitivity analysis 
+### Sensitivity analysis 
 # Leave-one-out sensitivity analysis with VCV subsetting
 study_list <- unique(clean_data$study_ID)
 
@@ -587,7 +617,7 @@ dev.off()
 #     Reference level = feed behaviour (alphabetical default).
 #     Re-level to obtain additional pairwise contrasts
 
-##  Full dataset 
+###  Full dataset 
 
 # Model A: no-intercept — estimate per outcome category (full dataset)
 res_meta_reg <- rma.mv(yi = lnRR, V = VCV,
@@ -719,18 +749,12 @@ sens_mlmr_plot
 ggsave(here("Figures", "sens_mlmr_plot.png"),
        plot = sens_mlmr_plot, dpi = 300, width = 9, height = 8, units = "in")
 
-# Subgroup MLMA for each outcome category 
+### Subgroup MLMA for each outcome category 
 
 # Create subgroup datasets
-clean_data_sens_feed   <- clean_data_sens %>% filter(outcome_category == "feed behaviour")
-clean_data_sens_growth <- clean_data_sens %>% filter(outcome_category == "growth performance")
-clean_data_sens_nutr   <- clean_data_sens %>% filter(outcome_category == "nutrient utilisation")
-
-# Check direction of effect sizes for nutrient utilisation
-clean_data_sens %>%
-  filter(outcome_category == "nutrient utilisation") %>%
-  select(lnRR, control_mean, treatment_mean, outcome_long) %>%
-  print(n = 55)
+clean_data_sens_feed         <- clean_data_sens %>% filter(outcome_category == "feed behaviour")
+clean_data_sens_growth       <- clean_data_sens %>% filter(outcome_category == "growth performance")
+clean_data_sens_nutr         <- clean_data_sens %>% filter(outcome_category == "nutrient utilisation")
 
 # Function: run subgroup MLMA for a given outcome category
 run_mlma <- function(data, outcome_cat, rho = 0.5,
@@ -780,6 +804,36 @@ I2_results_subgroups <- lapply(results_mlma, function(x) {
 })
 names(I2_results_subgroups) <- outcome_list
 I2_results_subgroups
+
+# Sensitivity test for PD and ED outcomes
+
+# Create nutrient utilisation dataset with PD and ED removed
+clean_data_sens_nodeposition <- clean_data_sens %>%   filter(outcome_category == "nutrient utilisation",!outcome %in% c("PD", "ED"))
+
+# VCV for no-deposition nutrient utilisation dataset
+VCV_nodeposition <- vcalc(
+  vi      = vi_lnRR,
+  cluster = cohort_ID,
+  obs     = ES_ID,
+  rho     = 0.5,
+  data    = clean_data_sens_nodeposition
+)
+
+# MLMA — nutrient utilisation with ED and PD removed
+res_nodeposition <- rma.mv(
+  yi     = lnRR,
+  V      = VCV_nodeposition,
+  random = ~ 1 | study_ID / ES_ID,
+  test   = "t",
+  data   = clean_data_sens_nodeposition,
+  method = "REML"
+)
+
+# Comparison
+results_mlma[["nutrient utilisation"]]$model
+res_nodeposition
+
+### MLMR models
 
 # Moderator collinearity check 
 corr_cont <- round(
