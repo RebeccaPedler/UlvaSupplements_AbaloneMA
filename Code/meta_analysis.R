@@ -134,6 +134,33 @@ clean_data %>%
 # Create dataset
 nutr_sens <- clean_data %>% filter(outcome_category == "nutrient utilisation")
 
+# Re-create histogram with data coloured by outcome
+
+# Plot
+nutr_hist <- ggplot(nutr_sens, aes(x = lnRR, fill = outcome_long)) +
+  geom_histogram(bins = 20, colour = "white", linewidth = 0.3) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
+  labs(
+    title = "A)",
+    x    = "Effect size (lnRR)",
+    y    = "Frequency",
+    fill = "Outcome"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid       = element_blank(),
+    axis.line        = element_line(colour = "black"),
+    axis.ticks       = element_line(colour = "black", linewidth = 0.8),
+    axis.ticks.length = unit(0.25, "cm"),
+    axis.text        = element_text(colour = "black"),
+    legend.position  = "right",
+    plot.title = element_text(face = "bold")  
+  )
+
+# Print and save
+nutr_hist
+ggsave(here("Figures", "nutr_hist.png"), plot = nutr_hist, width = 8, height = 6, units = "in")
+
 # Build label dataframe for k and n per outcome
 nutr_labels <- nutr_sens %>%
   group_by(outcome_long) %>%
@@ -161,7 +188,7 @@ nutr_outcomes <- ggplot(nutr_sens, aes(x = lnRR,
     colour  = "grey30",
     inherit.aes = FALSE
   ) +
-  labs(x = "Effect size (lnRR)", y = "Outcome") +
+  labs(title = "B)", x = "Effect size (lnRR)", y = "Outcome") +
   theme_minimal() +
   theme(
     legend.position    = "none",
@@ -172,12 +199,18 @@ nutr_outcomes <- ggplot(nutr_sens, aes(x = lnRR,
     axis.ticks.length  = unit(0.25, "cm"),
     axis.text          = element_text(colour = "black", size = 10),
     panel.border       = element_blank(),
-    plot.margin        = margin(5, 80, 5, 5)  
+    plot.margin        = margin(5, 80, 5, 5),
+    plot.title = element_text(face = "bold")  
   )
 
 # Print and save plot
 nutr_outcomes
-ggsave(here("Figures", "nutr_outcomes.png"), width = 9, height = 8, units = "in")
+ggsave(here("Figures", "nutr_outcomes.png"), plot = nutr_outcomes, width = 9, height = 8, units = "in")
+
+# Print and save combined plot
+combined_nutr <- nutr_hist / nutr_outcomes + plot_layout(guides = "collect")
+combined_nutr
+ggsave(here("Figures", "combined_nutr.png"), plot = combined_nutr, dpi = 300, width  = 9, height = 10, units  = "in")
 
 # Respirometer measurements neutral-positive, FCR and PER both negative and positive, PD and ED only negative
 # See what studies are contributing what outcomes - e.g. is this a study-level or just outcome difference
@@ -263,7 +296,7 @@ run_orchard_plot <- function(model, I2,
 # Create and save orchard plot for full dataset
 all_data_plot <- run_orchard_plot(model = res_3L_all, I2 = I2_all)
 all_data_plot
-ggsave(here("Figures", "all_data_orchard_plot.png"), width = 9, height = 8, units = "in")
+ggsave(here("Figures", "all_data_orchard_plot.png"), plot = all_data_plot, width = 9, height = 8, units = "in")
 
 # Testing effect of species 
 
@@ -443,20 +476,16 @@ summary(results_all_data$multi_model)
 
 # Save publication bias plots — full dataset
 results_all_data$plot_egger
-ggsave(here("Figures", "plot_egger.png"),
-       plot = results_all_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_egger.png"), plot = results_all_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
 
 results_all_data$plot_year
-ggsave(here("Figures", "plot_year.png"),
-       plot = results_all_data$plot_year, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_year.png"), plot = results_all_data$plot_year, dpi = 300, width = 8, height = 6, units = "in")
 
 results_all_data$plot_multi_egger
-ggsave(here("Figures", "plot_multi_egger.png"),
-       plot = results_all_data$plot_multi_egger, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_multi_egger.png"), plot = results_all_data$plot_multi_egger, dpi = 300, width = 8, height = 6, units = "in")
 
 results_all_data$plot_multi_year
-ggsave(here("Figures", "plot_multi_year.png"),
-       plot = results_all_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_multi_year.png"), plot = results_all_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
 
 # Stacked combined plot — full dataset
 combined_plot <- results_all_data$plot_egger + results_all_data$plot_year +
@@ -465,8 +494,7 @@ combined_plot <- results_all_data$plot_egger + results_all_data$plot_year +
     theme = theme(plot.tag = element_text(face = "bold"))
   )
 combined_plot
-ggsave(here("Figures", "combined_plot.png"),
-       plot = combined_plot, dpi = 300, width = 16, height = 8, units = "in")
+ggsave(here("Figures", "combined_plot.png"), plot = combined_plot, dpi = 300, width = 16, height = 8, units = "in")
 
 # Funnel plot — full dataset
 png(here("Figures", "funnel_plot_all.png"), width = 8, height = 6, units = "in", res = 600)
@@ -578,7 +606,7 @@ sens_data_plot <- run_orchard_plot(
   title = "B) All Outcome Categories (S004 removed)"
 )
 sens_data_plot
-ggsave(here("Figures", "sens_data_orchard_plot.png"), width = 9, height = 8, units = "in")
+ggsave(here("Figures", "sens_data_orchard_plot.png"), plot = sens_data_plot, width = 9, height = 8, units = "in")
 
 # Publication bias — sensitive dataset
 results_sens_data <- run_bias_models(
@@ -597,20 +625,16 @@ summary(results_sens_data$multi_model)
 
 # Save publication bias plots — sensitive dataset
 results_sens_data$plot_egger
-ggsave(here("Figures", "plot_egger_sens.png"),
-       plot = results_sens_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_egger_sens.png"), plot = results_sens_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
 
 results_sens_data$plot_year
-ggsave(here("Figures", "plot_year_sens.png"),
-       plot = results_sens_data$plot_year, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_year_sens.png"), plot = results_sens_data$plot_year, dpi = 300, width = 8, height = 6, units = "in")
 
 results_sens_data$plot_multi_egger
-ggsave(here("Figures", "plot_multi_egger_sens.png"),
-       plot = results_sens_data$plot_multi_egger, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_multi_egger_sens.png"), plot = results_sens_data$plot_multi_egger, dpi = 300, width = 8, height = 6, units = "in")
 
 results_sens_data$plot_multi_year
-ggsave(here("Figures", "plot_multi_year_sens.png"),
-       plot = results_sens_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
+ggsave(here("Figures", "plot_multi_year_sens.png"), plot = results_sens_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
 
 # Stacked combined plot — sensitive dataset
 combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year +
@@ -619,8 +643,7 @@ combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year
     theme = theme(plot.tag = element_text(face = "bold"))
   )
 combined_plot_sens
-ggsave(here("Figures", "combined_plot_sens.png"),
-       plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
+ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
 
 # Funnel plot — sensitive dataset
 png(here("Figures", "funnel_plot_sens.png"), width = 8, height = 6, units = "in", res = 600)
@@ -714,7 +737,7 @@ all_data_mlmr_plot <- run_orchard_plot(
   title = "All data — outcome category"
 )
 all_data_mlmr_plot
-ggsave(here("Figures", "all_data_mlmr_plot.png"), dpi = 500, width = 9, height = 8, units = "in")
+ggsave(here("Figures", "all_data_mlmr_plot.png"), plot = all_data_mlmr_plot, dpi = 500, width = 9, height = 8, units = "in")
 
 ## Sensitive dataset 
 
@@ -778,8 +801,7 @@ sens_mlmr_plot <- run_orchard_plot(
   title = "Sensitive dataset — outcome category (S004 removed)"
 )
 sens_mlmr_plot
-ggsave(here("Figures", "sens_mlmr_plot.png"),
-       plot = sens_mlmr_plot, dpi = 300, width = 9, height = 8, units = "in")
+ggsave(here("Figures", "sens_mlmr_plot.png"), plot = sens_mlmr_plot, dpi = 300, width = 9, height = 8, units = "in")
 
 ### Subgroup MLMA for each outcome category 
 
@@ -867,26 +889,58 @@ res_nodeposition
 
 ### MLMR models
 
-# Moderator collinearity check 
+# Untransformed correlation matrix
 corr_cont <- round(
-  cor(clean_data_sens[, c("intervention_dose_raw", "study_duration_days_raw",
-                          "initial_size_g_raw")]), 2)
+  cor(clean_data_sens %>%
+        dplyr::select(intervention_dose_raw, study_duration_days_raw, initial_size_g_raw) %>%
+        rename("Ulva dose (%)"         = intervention_dose_raw,
+               "Study duration (days)" = study_duration_days_raw,
+               "Initial abalone size (g)" = initial_size_g_raw)), 2)
 
 p_cont <- ggcorrplot(corr_cont, hc.order = TRUE, lab = TRUE,
                      outline.col = "white",
                      colors = c("#6D9EC1", "white", "#E46726"),
-                     title = "(a) Continuous variables")
+                     title = "A)") +
+  scale_x_discrete(labels = c(
+    "Ulva dose (%)"         = expression(italic("Ulva") ~ "dose (%)"),
+    "Study duration (days)" = "Study duration (days)",
+    "Initial abalone size (g)" = "Initial abalone size (g)"
+  )) +
+  scale_y_discrete(labels = c(
+    "Ulva dose (%)"         = expression(italic("Ulva") ~ "dose (%)"),
+    "Study duration (days)" = "Study duration (days)",
+    "Initial abalone size (g)" = "Initial abalone size (g)"
+  )) +
+  theme(plot.title = element_text(face = "bold"))
 
+# Log-transformed correlation matrix
 corr_cont_log <- round(
-  cor(log(clean_data_sens[, c("intervention_dose_raw", "study_duration_days_raw",
-                              "initial_size_g_raw")])), 2)
+  cor(log1p(clean_data_sens %>%
+              dplyr::select(intervention_dose_raw, study_duration_days_raw, initial_size_g_raw) %>%
+              rename("Ulva dose (%)"         = intervention_dose_raw,
+                     "Study duration (days)" = study_duration_days_raw,
+                     "Initial abalone size (g)" = initial_size_g_raw))), 2)
 
 p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
                          outline.col = "white",
                          colors = c("#6D9EC1", "white", "#E46726"),
-                         title = "(b) Log-transformed continuous variables")
+                         title = "B)") +
+  scale_x_discrete(labels = c(
+    "Ulva dose (%)"         = expression(italic("Ulva") ~ "dose (%)"),
+    "Study duration (days)" = "Study duration (days)",
+    "Initial abalone size (g)" = "Initial abalone size (g)"
+  )) +
+  scale_y_discrete(labels = c(
+    "Ulva dose (%)"         = expression(italic("Ulva") ~ "dose (%)"),
+    "Study duration (days)" = "Study duration (days)",
+    "Initial body size (g)" = "Initial abalone size (g)"
+  )) +
+  theme(plot.title = element_text(face = "bold"))
 
-p_cont + p_cont_log + plot_layout(guides = "collect")
+# Combine correlation plot, print and save
+combined_corr <- p_cont + p_cont_log + plot_layout(guides = "collect")
+combined_corr
+ggsave(here("Figures", "combined_corr.png"), plot = combined_corr, dpi    = 300, width  = 12, height = 6, units  = "in")
 
 # VIF check
 lm_check <- lm(lnRR ~ study_duration_days_raw + initial_size_g_raw + intervention_dose_raw,
@@ -1021,5 +1075,4 @@ ulva_inclusion <- bubble_plot(res_meta_dose_plot,
   )
 
 ulva_inclusion
-ggsave(here("Figures", "ulva_inclusion_relationship.png"),
-       plot = ulva_inclusion, width = 10, height = 6, units = "in")
+ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion, width = 10, height = 6, units = "in")
