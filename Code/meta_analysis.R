@@ -129,23 +129,55 @@ clean_data %>%
   head(5) # Flag S004.11, S001.18, S006.23, S006.26, S008.3 for sensitivity analysis
 
 # Nutrient utilisation effect sizes are bimodal - Is this being driven by a particular outcome?
+# Plot different specific outcomes within nutrient utilisation dataset
 
+# Create dataset
 nutr_sens <- clean_data %>% filter(outcome_category == "nutrient utilisation")
 
-ggplot(nutr_sens, aes(x = lnRR, y = reorder(outcome_long, lnRR, median), 
-                      colour = outcome_long)) +
+# Build label dataframe for k and n per outcome
+nutr_labels <- nutr_sens %>%
+  group_by(outcome_long) %>%
+  summarise(
+    k         = n(),
+    n_studies = n_distinct(study_ID),
+    .groups   = "drop"
+  ) %>%
+  mutate(label = paste0("k = ", k, ", n = ", n_studies))
+
+# Create plot
+nutr_outcomes <- ggplot(nutr_sens, aes(x = lnRR, 
+                                        y = reorder(outcome_long, lnRR, median),
+                                        colour = outcome_long)) +
   geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
   geom_jitter(height = 0.15, size = 2.5, alpha = 0.7) +
-  stat_summary(fun = median, geom = "point", shape = 18, 
+  stat_summary(fun = median, geom = "point", shape = 18,
                size = 4, colour = "black") +
-  labs(x = "Effect size (lnRR)",
-       y = NULL,
-       title = "Nutrient utilisation outcomes") +
+  geom_text(
+    data    = nutr_labels,
+    aes(x = 1.2, y = outcome_long, label = label),
+    hjust   = 1.05,           
+    vjust   = -0.6,           
+    size    = 4,
+    colour  = "grey30",
+    inherit.aes = FALSE
+  ) +
+  labs(x = "Effect size (lnRR)", y = "Outcome") +
   theme_minimal() +
-  theme(legend.position = "none",
-        panel.grid.major.y = element_line(colour = "grey90"),
-        panel.grid.major.x = element_blank(),
-        axis.line.x = element_line(colour = "black"))
+  theme(
+    legend.position    = "none",
+    panel.grid         = element_blank(),
+    axis.line.x        = element_line(colour = "black"),
+    axis.line.y        = element_line(colour = "black"),
+    axis.ticks         = element_line(colour = "black", linewidth = 0.8),
+    axis.ticks.length  = unit(0.25, "cm"),
+    axis.text          = element_text(colour = "black", size = 10),
+    panel.border       = element_blank(),
+    plot.margin        = margin(5, 80, 5, 5)  
+  )
+
+# Print and save plot
+nutr_outcomes
+ggsave(here("Figures", "nutr_outcomes.png"), width = 9, height = 8, units = "in")
 
 # Respirometer measurements neutral-positive, FCR and PER both negative and positive, PD and ED only negative
 # See what studies are contributing what outcomes - e.g. is this a study-level or just outcome difference
