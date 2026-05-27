@@ -41,7 +41,7 @@ here()
 clean_data <- read_csv(here("Data", "cleaned_data_for_meta_analysis.csv"))
 head(clean_data)
 
-### Prepare data for modelling
+## Prepare data for modelling
 
 # Calculate effect size (lnRR) and variance
 clean_data <- clean_data %>%
@@ -86,7 +86,8 @@ clean_data %>%
     agreement = mean(consistency, na.rm = TRUE)
   )
 
-# Check distribution of effect sizes overall and for each outcome category
+## Check distribution of effect sizes overall and for each outcome category
+
 lnRR_feed    <- clean_data %>% filter(outcome_category == "feed behaviour")
 lnRR_growth  <- clean_data %>% filter(outcome_category == "growth performance")
 lnRR_nutrient <- clean_data %>% filter(outcome_category == "nutrient utilisation")
@@ -128,89 +129,84 @@ clean_data %>%
          lnRR, vi_lnRR) %>%
   head(5) # Flag S004.11, S001.18, S006.23, S006.26, S008.3 for sensitivity analysis
 
-# Nutrient utilisation effect sizes are bimodal - Is this being driven by a particular outcome?
-# Plot different specific outcomes within nutrient utilisation dataset
+## Plot specific outcomes within each dataset (feed behaviour, nutrient utilisation, growth performance)
 
-# Create dataset
-nutr_sens <- clean_data %>% filter(outcome_category == "nutrient utilisation")
+# Create function for plots
+plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
 
-# Re-create histogram with data coloured by outcome
+  # Filter data
+  dat <- data %>% filter(outcome_category == outcome_cat)
 
-# Plot
-nutr_hist <- ggplot(nutr_sens, aes(x = lnRR, fill = outcome_long)) +
-  geom_histogram(bins = 20, colour = "white", linewidth = 0.3) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
-  labs(
-    title = "A)",
-    x    = "Effect size (lnRR)",
-    y    = "Frequency",
-    fill = "Outcome"
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid       = element_blank(),
-    axis.line        = element_line(colour = "black"),
-    axis.ticks       = element_line(colour = "black", linewidth = 0.8),
-    axis.ticks.length = unit(0.25, "cm"),
-    axis.text        = element_text(colour = "black"),
-    legend.position  = "right",
-    plot.title = element_text(face = "bold")  
-  )
+  # Build k and n labels
+  labels <- dat %>%
+    group_by(outcome_long) %>%
+    summarise(
+      k         = n(),
+      n_studies = n_distinct(study_ID),
+      .groups   = "drop"
+    ) %>%
+    mutate(label = paste0("k = ", k, ", n = ", n_studies))
+  
+  # Shared theme
+  base_theme <- theme_minimal() +
+    theme(
+      panel.grid        = element_blank(),
+      axis.line         = element_line(colour = "black"),
+      axis.ticks        = element_line(colour = "black", linewidth = 0.8),
+      axis.ticks.length = unit(0.25, "cm"),
+      axis.text         = element_text(colour = "black", size = 10),
+      panel.border      = element_blank(),
+      plot.title        = element_text(face = "bold")
+    )
+  
+  # Histogram
+  p_hist <- ggplot(dat, aes(x = lnRR, fill = outcome_long)) +
+    geom_histogram(bins = 20, colour = "white", linewidth = 0.3) +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
+    labs(title = "A)", x = "Effect size (lnRR)", y = "Frequency", fill = "Outcome") +
+    base_theme +
+    theme(legend.position = "right")
+  
+  # Forest-like plot
+  p_outcomes <- ggplot(dat, aes(x = lnRR,
+                                 y = reorder(outcome_long, lnRR, median),
+                                 colour = outcome_long)) +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+    geom_jitter(height = 0.15, size = 2.5, alpha = 0.7) +
+    stat_summary(fun = median, geom = "point", shape = 18,
+                 size = 4, colour = "black") +
+    geom_text(
+      data        = labels,
+      aes(x = x_label_pos, y = outcome_long, label = label),
+      hjust       = 1.05,
+      vjust       = -0.6,
+      size        = 4,
+      colour      = "grey30",
+      inherit.aes = FALSE
+    ) +
+    labs(title = "B)", x = "Effect size (lnRR)", y = "Outcome") +
+    base_theme +
+    theme(
+      legend.position = "none",
+      plot.margin     = margin(5, 80, 5, 5)
+    )
+  
+  # Combine
+  p_hist / p_outcomes + plot_layout(guides = "collect")
+}
 
-# Print and save
-nutr_hist
-ggsave(here("Figures", "nutr_hist.png"), plot = nutr_hist, width = 8, height = 6, units = "in")
-
-# Build label dataframe for k and n per outcome
-nutr_labels <- nutr_sens %>%
-  group_by(outcome_long) %>%
-  summarise(
-    k         = n(),
-    n_studies = n_distinct(study_ID),
-    .groups   = "drop"
-  ) %>%
-  mutate(label = paste0("k = ", k, ", n = ", n_studies))
-
-# Create plot
-nutr_outcomes <- ggplot(nutr_sens, aes(x = lnRR, 
-                                        y = reorder(outcome_long, lnRR, median),
-                                        colour = outcome_long)) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
-  geom_jitter(height = 0.15, size = 2.5, alpha = 0.7) +
-  stat_summary(fun = median, geom = "point", shape = 18,
-               size = 4, colour = "black") +
-  geom_text(
-    data    = nutr_labels,
-    aes(x = 1.2, y = outcome_long, label = label),
-    hjust   = 1.05,           
-    vjust   = -0.6,           
-    size    = 4,
-    colour  = "grey30",
-    inherit.aes = FALSE
-  ) +
-  labs(title = "B)", x = "Effect size (lnRR)", y = "Outcome") +
-  theme_minimal() +
-  theme(
-    legend.position    = "none",
-    panel.grid         = element_blank(),
-    axis.line.x        = element_line(colour = "black"),
-    axis.line.y        = element_line(colour = "black"),
-    axis.ticks         = element_line(colour = "black", linewidth = 0.8),
-    axis.ticks.length  = unit(0.25, "cm"),
-    axis.text          = element_text(colour = "black", size = 10),
-    panel.border       = element_blank(),
-    plot.margin        = margin(5, 80, 5, 5),
-    plot.title = element_text(face = "bold")  
-  )
-
-# Print and save plot
-nutr_outcomes
-ggsave(here("Figures", "nutr_outcomes.png"), plot = nutr_outcomes, width = 9, height = 8, units = "in")
-
-# Print and save combined plot
-combined_nutr <- nutr_hist / nutr_outcomes + plot_layout(guides = "collect")
+# Print all plots 
+combined_fb   <- plot_outcome_distribution(clean_data_sens, "feed behaviour",x_label_pos = 1.2)
+combined_fb
+combined_nutr <- plot_outcome_distribution(clean_data_sens, "nutrient utilisation", x_label_pos = 1.2)
 combined_nutr
-ggsave(here("Figures", "combined_nutr.png"), plot = combined_nutr, dpi = 300, width  = 9, height = 10, units  = "in")
+combined_gp   <- plot_outcome_distribution(clean_data_sens, "growth performance", x_label_pos = 1.2)
+combined_gp
+
+# Save plots
+ggsave(here("Figures", "combined_nutr.png"), plot = combined_nutr, dpi = 300, width = 9, height = 8, units = "in")
+ggsave(here("Figures", "combined_fb.png"), plot = combined_fb, dpi = 300, width = 9, height = 8, units = "in")
+ggsave(here("Figures", "combined_gp.png"), plot = combined_gp, dpi = 300, width = 9, height = 8, units = "in")
 
 # Respirometer measurements neutral-positive, FCR and PER both negative and positive, PD and ED only negative
 # See what studies are contributing what outcomes - e.g. is this a study-level or just outcome difference
@@ -220,6 +216,8 @@ clean_data %>%
   summarise(k = n(), mean_lnRR = round(mean(lnRR), 3), .groups = "drop") %>%
   arrange(outcome, study_ID) %>%
   print(n = 20)
+
+## Run overall meta-analysis
 
 # Many ES_ID compare to the same control (e.g., S001 compares three different Ulva doses to the same 0% control)
 # Calculate variance covariance (VCV) matrix to account for this
@@ -298,7 +296,7 @@ all_data_plot <- run_orchard_plot(model = res_3L_all, I2 = I2_all)
 all_data_plot
 ggsave(here("Figures", "all_data_orchard_plot.png"), plot = all_data_plot, width = 9, height = 8, units = "in")
 
-# Testing effect of species 
+## Test the effect of species (as both a fixed and random effect)
 
 # MLMA with species as fixed effect (no-intercept: estimate per level)
 res_species_fixed <- rma.mv(
@@ -350,6 +348,8 @@ print(I2_species_model)
 anova(res_3L_all, res_species_random)
 
 ### Adding species as a random effect does not improve model fit; continue without
+
+## Publication bias
 
 # Publication bias function
 run_bias_models <- function(data, 
@@ -475,6 +475,7 @@ summary(results_all_data$year_model)
 summary(results_all_data$multi_model)
 
 # Save publication bias plots — full dataset
+
 results_all_data$plot_egger
 ggsave(here("Figures", "plot_egger.png"), plot = results_all_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
 
@@ -493,6 +494,7 @@ combined_plot <- results_all_data$plot_egger + results_all_data$plot_year +
     tag_levels = list(c("A)", "B)")),
     theme = theme(plot.tag = element_text(face = "bold"))
   )
+
 combined_plot
 ggsave(here("Figures", "combined_plot.png"), plot = combined_plot, dpi = 300, width = 16, height = 8, units = "in")
 
@@ -512,10 +514,14 @@ axis(1, at = axTicks(1), labels = formatC(axTicks(1), digits = 1, format = "f"))
 axis(2, at = axTicks(2), labels = formatC(axTicks(2), digits = 1, format = "f"))
 dev.off()
 
-### Sensitivity analysis 
+## Sensitivity analysis
+ 
 # Leave-one-out sensitivity analysis with VCV subsetting
+
+# Create study list
 study_list <- unique(clean_data$study_ID)
 
+# Create VCV for sensitivity test
 sensitivity_results_VCV <- lapply(study_list, function(S) {
   
   dat_sub  <- subset(clean_data, study_ID != S)
@@ -545,7 +551,8 @@ print(sensitivity_results_VCV)
 
 # S004 is highly influential (>100% change, sign reversal)
 # Author (D. Francis) noted poor performance was linked to poor diet stability
-# Re-run MLMA without S004
+
+## Re-run MLMA without S004
 
 # Create filtered dataset
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
@@ -642,6 +649,7 @@ combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year
     tag_levels = list(c("A)", "B)")),
     theme = theme(plot.tag = element_text(face = "bold"))
   )
+
 combined_plot_sens
 ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
 
@@ -661,20 +669,14 @@ axis(1, at = axTicks(1), labels = formatC(axTicks(1), digits = 1, format = "f"))
 axis(2, at = axTicks(2), labels = formatC(axTicks(2), digits = 1, format = "f"))
 dev.off()
 
-# Outcome category as moderator (MLMR) 
-# Two models are fitted for each dataset
-#
-#   Model A — no-intercept (mods = ~ 0 + outcome_category):
-#     Returns a separate estimate for each level; tests each against zero
-#
+## Outcome category as moderator (MLMR) 
+
+#   Model A — no-intercept (mods = ~ 0 + outcome_category)
 #   Model B — with-intercept (mods = ~ outcome_category):
-#     Returns contrasts between levels; tests whether levels differ from each other.
-#     Reference level = feed behaviour (alphabetical default).
-#     Re-level to obtain additional pairwise contrasts
 
-###  Full dataset 
+#  Full dataset 
 
-# Model A: no-intercept — estimate per outcome category (full dataset)
+# Model A: no-intercept — does each outcome category differ from zero (full dataset)
 res_meta_reg <- rma.mv(yi = lnRR, V = VCV,
   mods   = ~ 0 + outcome_category,
   random = list(~ 1 | study_ID / ES_ID),
@@ -684,7 +686,7 @@ res_meta_reg <- rma.mv(yi = lnRR, V = VCV,
 )
 res_meta_reg
 
-# Model B: with-intercept — contrasts between outcome categories (full dataset)
+# Model B: with-intercept to compare between full dataset (full dataset)
 # Reference level = feed behaviour
 res_meta_reg_contrasts <- rma.mv(yi = lnRR, V = VCV,
   mods   = ~ outcome_category,
@@ -716,11 +718,8 @@ res_meta_reg_contrasts_gp
 # outcome_categoryfeed behaviour         = feed behaviour vs growth performance
 # outcome_categorynutrient utilisation   = nutrient utilisation vs growth performance
 
-# Restore original factor ordering for downstream code
-clean_data$outcome_category <- factor(clean_data$outcome_category,
-                                      levels = c("feed behaviour",
-                                                 "growth performance",
-                                                 "nutrient utilisation"))
+# Restore original factor ordering 
+clean_data$outcome_category <- factor(clean_data$outcome_category, levels = c("feed behaviour", "growth performance", "nutrient utilisation"))
 
 # R² and variance components for full-dataset MLMR (no-intercept model)
 r2_meta_reg <- r2_ml(res_meta_reg, res_3L_all)
@@ -803,7 +802,7 @@ sens_mlmr_plot <- run_orchard_plot(
 sens_mlmr_plot
 ggsave(here("Figures", "sens_mlmr_plot.png"), plot = sens_mlmr_plot, dpi = 300, width = 9, height = 8, units = "in")
 
-### Subgroup MLMA for each outcome category 
+## Subgroup MLMA for each outcome category 
 
 # Create subgroup datasets
 clean_data_sens_feed         <- clean_data_sens %>% filter(outcome_category == "feed behaviour")
@@ -859,7 +858,7 @@ I2_results_subgroups <- lapply(results_mlma, function(x) {
 names(I2_results_subgroups) <- outcome_list
 I2_results_subgroups
 
-# Sensitivity test for PD and ED outcomes
+## Sensitivity test for PD and ED outcomes
 
 # Create nutrient utilisation dataset with PD and ED removed
 clean_data_sens_nodeposition <- clean_data_sens %>%   filter(outcome_category == "nutrient utilisation",!outcome %in% c("PD", "ED"))
@@ -887,7 +886,7 @@ res_nodeposition <- rma.mv(
 results_mlma[["nutrient utilisation"]]$model
 res_nodeposition
 
-### MLMR models
+## MLMR models
 
 # Untransformed correlation matrix
 corr_cont <- round(
@@ -940,7 +939,9 @@ p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
 # Combine correlation plot, print and save
 combined_corr <- p_cont + p_cont_log + plot_layout(guides = "collect")
 combined_corr
-ggsave(here("Figures", "combined_corr.png"), plot = combined_corr, dpi    = 300, width  = 12, height = 6, units  = "in")
+ggsave(here("Figures", "combined_corr.png"), plot = combined_corr, dpi = 300, width = 12, height = 6, units  = "in")
+
+ggsave("combined_corr.png", plot = combined_corr, dpi = 300, width = 12, height = 6, units = "in")
 
 # VIF check
 lm_check <- lm(lnRR ~ study_duration_days_raw + initial_size_g_raw + intervention_dose_raw,
@@ -956,7 +957,7 @@ fixed_vars_size     <- c("intervention_dose", "initial_size_g", "intervention_do
 fixed_vars_duration <- c("study_duration_days", "intervention_dose", "intervention_dose2")
 fixed_vars_all      <- c("study_duration_days", "intervention_dose", "intervention_dose2", "initial_size_g")
 
-# Function: run MLMR with specified fixed effects (no-intercept for continuous moderators)
+# Function: run MLMR with fixed effects (no-intercept for continuous moderators)
 run_mlmr_fe <- function(data, outcome_cat = NULL, fixed_effects = NULL,
                         rho = 0.5, random_structure = "~1 | study_ID/ES_ID") {
   
@@ -1046,7 +1047,8 @@ results_mlmr_size$`feed behaviour`$model
 results_mlmr_size$`growth performance`$model
 results_mlmr_size$`nutrient utilisation`$model
 
-# Bubble plot — Ulva inclusion level vs effect size
+## Bubble plot — Ulva inclusion level vs effect size
+
 # Run MLMR with unscaled Ulva inclusion level 
 res_meta_dose_plot <- rma.mv(yi = lnRR, V = VCV_sens,
   mods   = ~ intervention_dose_raw + I(intervention_dose_raw^2),
