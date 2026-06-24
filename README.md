@@ -1,79 +1,114 @@
-Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
+# UlvaSupplements_AbaloneMA
 
-This repository stores the data, bibliometric files, and code used for this study. Please find the description for each folder below. Kindly contact Rebecca Pedler (Rebecca.pedler@yumbah.com) for any queries, or to reuse any data or analysis for future studies.
+Code, data, and outputs supporting the manuscript:
 
-Code
+**"Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary *Ulva* sp. supplementation: A systematic review and multi-level meta-analysis"**
 
-This folder contains all code used to obtain results for the meta-analysis:
+Rebecca L. Pedler, Matthew S. Bansemer, James O. Harris, Ondi L. Crino
 
-•	metaDigitiser. This R script was used to extract data from figures in the figures_for_extraction subfolder found in Data.
+---
 
-•	all_outcomes. This R script was used to conduct the MLMA on the entire dataset.
+## Overview
 
-•	deduplicate. This R script was used to remove duplicate hits from the WOS_and_SCOPUS_combined_11092025.csv file.
+This repository contains the full analytical pipeline, raw data, bibliometric search files, and screening records used to conduct a systematic review and meta-analysis of *Ulva* sp. supplementation in abalone (*Haliotis* spp.) diets. 
 
-•	feed_intake. This R script was used to conduct the MLMA, subsequent MLMR, publication bias testing and figure generation for the dataset where outcome_category in Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv is feed_behaviour.
+## Repository structure
 
-•	growth_performance. This R script was used to conduct the MLMA, subsequent MLMR, publication bias testing and figure generation for the dataset where outcome_category in Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv is growth_performance.
+```
+UlvaSupplements_AbaloneMA/
+├── code/
+│   ├── metaDigitiser.R
+│   ├── all_outcomes.R
+│   ├── deduplicate.R
+│   ├── feed_intake.R
+│   ├── growth_performance.R
+│   ├── nutrient_utilisation.R
+│   ├── orchard_plots.R
+│   └── study_characteristics.R
+├── data/
+│   ├── Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv
+│   ├── Ulva inclusion in Haliotis sp. diets_ A Meta-analysis - Metadata.csv
+│   └── figures_for_extraction/
+│       ├── Falade/
+│       └── Mwangudza/
+├── searches/
+│   ├── primary_literature/
+│   │   ├── WOS_11092025.csv
+│   │   ├── SCOPUS_11092025.csv
+│   │   ├── WOS_and_SCOPUS_combined_11092025.csv
+│   │   └── WOS_and_SCOPUS_duplicate_removed_11092025.csv
+│   └── grey_literature/
+│       ├── BASE_ALL_10102025.csv
+│       └── BASE_duplicate_removed_10102025.csv
+└── screening/
+    ├── RP_abstracts.csv
+    └── RP_fulltext.csv
+```
 
-•	nutrient_utilisation. This R script was used to conduct the MLMA, subsequent MLMR, publication bias testing and figure generation for the dataset where outcome_category in Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv is nutrient_utilisation.
+## Code
 
-•	orchard_plots. This R script was used to generate orchard plots for the MLMA on all data as well as feed behaviour, growth performance and nutrient utilisation datasets.
+### `code/deduplicate.R`
 
-•	study_characteristics. This R script was used to assess study characteristics of the entire Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv dataset.
+R script used to identify and remove duplicate records from the combined Web of Science and SCOPUS search export (`WOS_and_SCOPUS_combined_11092025.csv`). Outputs the deduplicated file (`WOS_and_SCOPUS_duplicate_removed_11092025.csv`).
 
-Data
+### `code/metaDigitiser.R`
 
-This folder contains data and metadata for the meta-analysis:
+R script used to extract numerical data from figures in the `data/figures_for_extraction/` subfolder using the `metaDigitiser` package. Produces extracted data suitable for inclusion in the primary analysis dataset.
 
-•	Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv: This csv contains extracted data from all eligible articles.
+### `code/meta_analysis.R`
 
-•	Ulva inclusion in Haliotis sp. diets_ A Meta-analysis - Metadata.csv: This csv contains the metadata description of information extracted from eligible articles.
+R script implementing the full MLMA, subsequent MLMR, publication bias testing, and figure generation.
 
-•	sub-folder figures_for_extraction which houses figures used for data extraction. Data was extracted using the MetaDigitiser.R code. 
+### `code/study_characteristics.R`
 
-Within this sub-folder, the following is stored:   
+R script used to summarise and visualise study characteristics across the full primary dataset, including species, *Ulva* inclusion levels, experimental duration, and geographic distribution of included studies.
 
-•	Falade. This contains all figures from the thesis:
+## Data
 
-Falade AE. Optimising Integrated Multitrophic Aquaculture (IMTA) on a South African Abalone Farm. Rhodes University; 2023.
+### `data/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv`
 
--	S006.1_CF.jpg
--	S006.1_FinalWeight.jpg
--	S006.1_SGR.jpg
--	S006.2_FCR.jpg
--	S006.2_FeedIntake.jpg
--	S006.2_PER.jpg
--	S006.2_SGR.jpg
--	S006.2_condition_factor.jpg
--	S006.2_final_shell_length.jpg
+The primary analysis dataset. Contains extracted data from all eligible articles.
 
-•	Mwangudza. This contains all figures from the thesis:
-Mwangudza PM. Assessment and Mitigation of Biosecurity Risks Associated with Macroalgae Inclusion in Farmed Abalone Diets in South Africa. Rhodes University; 2024.
--	S005.1_Final_length.jpg
--	S005.1_Final_weight.jpg
+### `data/Ulva inclusion in Haliotis sp. diets_ A Meta-analysis - Metadata.csv`
 
-Searches
+Metadata description for the primary dataset.
 
-This folder contains bibliometric files created during primary and grey literature searches. These files are stored in the following subfolders:
+### `data/figures_for_extraction/`
 
-primary_literature: within this folder, the following files are stored:
-•	WOS_11092025.csv: This file contains all hits returned from the search string on Web of Science Core Collection (11092025).
+Figures used for numerical data extraction via MetaDigitiser. Organised by study, with the following sources:
 
-•	SCOPUS_11092025.csv: This file contains all hits returned from the search string on SCOPUS (11092025).
+**Falade** — Figures from:
+Falade AE. *Optimising Integrated Multitrophic Aquaculture (IMTA) on a South African Abalone Farm*. Rhodes University; 2023.
 
-•	WOS_and_SCOPUS_combined_11092025.csv: This file contains the combined hits returned from Web of Science Core Collection and SCOPUS (11092025).
+**Mwangudza** — Figures from:
+Mwangudza PM. *Assessment and Mitigation of Biosecurity Risks Associated with Macroalgae Inclusion in Farmed Abalone Diets in South Africa*. Rhodes University; 2024.
 
-•	WOS_and_SCOPUS_duplicate_removed_11092025.csv: This file contains the combined hits returned from Web of Science Core Collection and SCOPUS (11092025) after deduplication using Deduplicate.
+## Searches
 
-Grey_literature: within this folder, the following files are stored:
-•	BASE_ALL_10102025.csv: This file contains all hits returned from BASES (10102025) using a modified string “Haliot” AND “Diet”.
+### `searches/primary_literature/`
 
-•	BASE_duplicate_removed_10102025.csv: This file contains all hits returned from BASE (10102025) using a modified string “Haliot” AND “Diet” and after deduplication using Deduplicate.R.
+Bibliometric search exports from Web of Science Core Collection and SCOPUS (conducted 11 September 2025), along with the combined file and the deduplicated output used for screening.
 
-Screening This folder contains abstract and full-text screening files:
-•	RP_abstracts.csv: This csv contains bibliometric information and outcomes for articles proceeding through abstract screening.
+### `searches/grey_literature/`
 
-•	RP_fulltext.csv: This csv contains bibliometric information and outcomes for articles proceeding through full-text screening.
+Search exports from BASE (Bielefeld Academic Search Engine; conducted 10 October 2025), along with the deduplicated output.
 
+## Screening
+
+### `screening/RP_abstracts.csv`
+
+Bibliometric information and eligibility outcomes for all records proceeding through abstract screening.
+
+### `screening/RP_fulltext.csv`
+
+Bibliometric information and eligibility outcomes for all records proceeding through full-text screening.
+
+## Citation
+
+Pedler RL, Bansemer MS, Harris JO, Crino OL. Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary *Ulva* sp. supplementation: A systematic review and multi-level meta-analysis. *In preparation*.
+
+## Contact
+
+Rebecca Pedler
+rebecca.pedler@yumbah.com | Rebecca.pedler@flinders.edu.au
 
