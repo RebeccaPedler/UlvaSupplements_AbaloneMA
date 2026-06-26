@@ -1078,3 +1078,5 @@ ulva_inclusion <- bubble_plot(res_meta_dose_plot,
 
 ulva_inclusion
 ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion, width = 10, height = 6, units = "in")
+
+### End of script ###
