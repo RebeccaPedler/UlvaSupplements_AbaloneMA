@@ -6,17 +6,13 @@
 packages_cran <- c(
   "here",         
   "readr",         
-  "dplyr",         
-  "tidyr",         
+  "dplyr",               
   "metafor",       
   "ggplot2",       
   "ggcorrplot",    
   "patchwork",     
   "car",
-  "clubSandwich",
-  "devtools",     
-  "emmeans",      
-  "R.rsp"         
+  "devtools"           
 )
 
 # Install and load any missing CRAN packages
