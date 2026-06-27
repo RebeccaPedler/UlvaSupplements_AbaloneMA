@@ -200,9 +200,9 @@ combined_gp   <- plot_outcome_distribution(clean_data, "growth performance", x_l
 combined_gp
 
 # Save plots
-ggsave(here("Figures", "combined_nutr.png"), plot = combined_nutr, dpi = 300, width = 9, height = 8, units = "in")
-ggsave(here("Figures", "combined_fb.png"), plot = combined_fb, dpi = 300, width = 9, height = 8, units = "in")
-ggsave(here("Figures", "combined_gp.png"), plot = combined_gp, dpi = 300, width = 9, height = 8, units = "in")
+ggsave(here("Figures", "combined_nutr.png"), plot = combined_nutr, dpi = 300, width = 8, height = 10, units = "in")
+ggsave(here("Figures", "combined_fb.png"), plot = combined_fb, dpi = 300, width = 8, height = 10, units = "in")
+ggsave(here("Figures", "combined_gp.png"), plot = combined_gp, dpi = 300, width = 8, height = 10, units = "in")
 
 # Respirometer measurements neutral-positive, FCR and PER both negative and positive, PD and ED only negative
 # See what studies are contributing what outcomes - e.g. is this a study-level or just outcome difference
