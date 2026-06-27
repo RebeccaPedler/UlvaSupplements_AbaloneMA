@@ -16,33 +16,64 @@ This repository contains the full analytical pipeline, raw data, bibliometric se
 
 ```
 UlvaSupplements_AbaloneMA/
-├── code/
-│   ├── metaDigitiser.R
-│   ├── all_outcomes.R
+├── Code/
 │   ├── deduplicate.R
-│   ├── feed_intake.R
-│   ├── growth_performance.R
-│   ├── nutrient_utilisation.R
-│   ├── orchard_plots.R
+│   ├── metaDigitiser.R
+│   ├── meta_analysis.R
 │   └── study_characteristics.R
-├── data/
-│   ├── Ulva inclusion in Haliotis sp. diets_ A Meta-analysis.csv
-│   ├── Ulva inclusion in Haliotis sp. diets_ A Meta-analysis - Metadata.csv
+├── Data/
+│   ├── cleaned_data_for_meta_analysis.csv
+│   ├── ulva_meta_analysis_raw_data.csv
+│   ├── metadata.csv
 │   └── figures_for_extraction/
+│       ├── Boarder/
+│       │   ├── Figure_9a.jpg
+│       │   └── Figure_9b.jpg
 │       ├── Falade/
+│       │   ├── S006.1_CF.jpg
+│       │   ├── S006.1_FinalWeight.jpg
+│       │   ├── S006.1_SGR.jpg
+│       │   ├── S006.2_condition_factor.jpg
+│       │   ├── S006.2_FCR.jpg
+│       │   ├── S006.2_FeedIntake.jpg
+│       │   ├── S006.2_final_shell_length.jpg
+│       │   ├── S006.2_PER.jpg
+│       │   └── S006.2_SGR.jpg
 │       └── Mwangudza/
-├── searches/
-│   ├── primary_literature/
-│   │   ├── WOS_11092025.csv
-│   │   ├── SCOPUS_11092025.csv
-│   │   ├── WOS_and_SCOPUS_combined_11092025.csv
-│   │   └── WOS_and_SCOPUS_duplicate_removed_11092025.csv
-│   └── grey_literature/
-│       ├── BASE_ALL_10102025.csv
-│       └── BASE_duplicate_removed_10102025.csv
-└── screening/
-    ├── RP_abstracts.csv
-    └── RP_fulltext.csv
+│           ├── S005.1_Final_length.jpg
+│           └── S005.1_Final_weight.jpg
+├── Figures/
+│   ├── all_data_mlmr_plot.png          # meta_analysis.R
+│   ├── all_data_orchard_plot.png       # meta_analysis.R
+│   ├── bubble_plot_species.png         # study_characteristics.R
+│   ├── combined_corr.png               # meta_analysis.R
+│   ├── combined_fb.png                 # meta_analysis.R
+│   ├── combined_gp.png                 # meta_analysis.R
+│   ├── combined_nutr.png               # meta_analysis.R
+│   ├── combined_plot.png               # meta_analysis.R
+│   ├── combined_plot_sens.png          # meta_analysis.R
+│   ├── decision_tree.png               # [source script not identified]
+│   ├── funnel_plot_all.png             # meta_analysis.R
+│   ├── funnel_plot_sens.png            # meta_analysis.R
+│   ├── journal_year.png                # study_characteristics.R
+│   ├── PRISMA_MA.png                   # [source script not identified]
+│   ├── Sankey_plot.png                 # study_characteristics.R
+│   ├── sens_data_orchard_plot.png      # meta_analysis.R
+│   ├── sens_mlmr_plot.png              # meta_analysis.R
+│   ├── ulva_inclusion_relationship.png # meta_analysis.R
+│   └── world_map.png                   # study_characteristics.R
+├── Screening/
+│   [screening records to be added]
+├── Searches/
+│   ├── grey_literature/
+│   │   ├── BASE_ALL_10102025.csv
+│   │   └── BASE_duplicate_removed_10102025.csv
+│   └── primary_literature/
+│       ├── SCOPUS_11092025.csv
+│       ├── WOS_11092025.xls
+│       ├── WOS_and_SCOPUS_combined_11092025.csv
+│       └── WOS_and_SCOPUS_duplicates_removed_11092025.csv
+└── README.md
 ```
 
 ## Code
