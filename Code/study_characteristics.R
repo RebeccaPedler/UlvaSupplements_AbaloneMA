@@ -18,7 +18,6 @@ library(ggplot2)
 library(grid)
 library(patchwork)
 library(here)
-library(devtools)
 
 # install.packages("devtools")
 devtools::install_github("davidsjoberg/ggsankey")
