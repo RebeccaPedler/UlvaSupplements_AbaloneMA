@@ -262,7 +262,21 @@ run_orchard_plot <- function(model, I2,
                              x_pos = 0.7,
                              y_pos = 0.5,
                              y_limits = c(-1.5, 1.5),
-                             colour = "grey") {
+                             colour = NULL) {
+  if (is.null(colour)) {
+    if (identical(mod, "1")) {
+      n_groups <- 1
+    } else {
+      mod_var <- model$data[[mod]]
+      n_groups <- if (is.factor(mod_var)) nlevels(mod_var) else length(unique(mod_var))
+    }
+    # Default palette: grey for 1 group, otherwise a colour-blind-friendly set
+    colour <- if (n_groups == 1) {
+      "grey"
+    } else {
+      grDevices::hcl.colors(n_groups, palette = "Dark 3")
+    }
+  }
   
   p <- orchaRd::orchard_plot(
     model,
@@ -275,10 +289,10 @@ run_orchard_plot <- function(model, I2,
       x     = x_pos,
       y     = y_pos,
       label = paste0("italic(I)^2 == ", round(I2$I2_total, 2), "*\"%\""),
-      color = "black",
-      parse = TRUE,
-      size  = 4,
-      face  = "bold"
+      color    = "black",
+      parse    = TRUE,
+      size     = 4,
+      fontface = "bold"
     ) +
     ggtitle(title) +
     scale_fill_manual(values = colour) +
