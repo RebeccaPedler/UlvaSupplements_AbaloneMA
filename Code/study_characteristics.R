@@ -1512,43 +1512,38 @@ mydata <- mydata %>%
 mydata %>% filter(treatment_CV < 0.005 | control_CV < 0.005) %>% View() # S001.18, S004.22, S004.27 still < 0.005 despite ammending
 
 # Arcsine transform proportional data (protein deposition and energy deposition)
-# Check data 
+mydata <- mydata %>%
+  mutate(
+    treatment_mean_prop = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                                  treatment_mean / 100, treatment_mean),
+    control_mean_prop   = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                                  control_mean / 100, control_mean),
+    treatment_SD_prop   = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                                  treatment_SD / 100, treatment_SD),
+    control_SD_prop     = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                                  control_SD / 100, control_SD),
+
+    treatment_mean = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                             asin(sqrt(treatment_mean_prop)), treatment_mean),
+    control_mean = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                           asin(sqrt(control_mean_prop)), control_mean),
+
+    treatment_SD = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                           sqrt((treatment_SD_prop^2) / 
+                                  (4 * treatment_mean_prop * (1 - treatment_mean_prop))),
+                           treatment_SD),
+    control_SD = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
+                         sqrt((control_SD_prop^2) / 
+                                (4 * control_mean_prop * (1 - control_mean_prop))),
+                         control_SD)
+  ) %>%
+  select(-treatment_mean_prop, -control_mean_prop, -treatment_SD_prop, -control_SD_prop)
+
+# Check data again to see if transformation successful
 mydata %>%
   dplyr::filter(outcome_long %in% c("Protein deposition", "Energy deposition")) %>%
   dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
-# Convert data to proportions
-mydata <- mydata %>%
-  mutate(
-    treatment_mean = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
-                             treatment_mean / 100, treatment_mean),
-    control_mean   = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
-                             control_mean / 100, control_mean),
-    treatment_SD   = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
-                             treatment_SD / 100, treatment_SD),
-    control_SD     = if_else(outcome_long %in% c("Protein deposition", "Energy deposition"),
-                             control_SD / 100, control_SD)
-  )
-
-# Arcsine transform
-mydata <- mydata %>%
-   mutate(
-    control_mean = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      asin(sqrt(control_mean)),
-      control_mean
-    ),
-    treatment_SD = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      sqrt((treatment_SD^2) / (4 * treatment_mean * (1 - treatment_mean))),
-      treatment_SD
-    ),
-    control_SD = ifelse(
-      outcome_long %in% c("Protein deposition", "Energy deposition"),
-      sqrt((control_SD^2) / (4 * control_mean * (1 - control_mean))),
-      control_SD
-    )
-  )
 
 # Check data again to see if transformation successful
 mydata %>%
