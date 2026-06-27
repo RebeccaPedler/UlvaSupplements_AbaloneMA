@@ -196,11 +196,11 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
 }
 
 # Print all plots 
-combined_fb   <- plot_outcome_distribution(clean_data_sens, "feed behaviour",x_label_pos = 1.2)
+combined_fb   <- plot_outcome_distribution(clean_data, "feed behaviour",x_label_pos = 1.2)
 combined_fb
-combined_nutr <- plot_outcome_distribution(clean_data_sens, "nutrient utilisation", x_label_pos = 1.2)
+combined_nutr <- plot_outcome_distribution(clean_data, "nutrient utilisation", x_label_pos = 1.2)
 combined_nutr
-combined_gp   <- plot_outcome_distribution(clean_data_sens, "growth performance", x_label_pos = 1.2)
+combined_gp   <- plot_outcome_distribution(clean_data, "growth performance", x_label_pos = 1.2)
 combined_gp
 
 # Save plots
@@ -940,8 +940,6 @@ p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
 combined_corr <- p_cont + p_cont_log + plot_layout(guides = "collect")
 combined_corr
 ggsave(here("Figures", "combined_corr.png"), plot = combined_corr, dpi = 300, width = 12, height = 6, units  = "in")
-
-ggsave("combined_corr.png", plot = combined_corr, dpi = 300, width = 12, height = 6, units = "in")
 
 # VIF check
 lm_check <- lm(lnRR ~ study_duration_days_raw + initial_size_g_raw + intervention_dose_raw,
