@@ -560,7 +560,7 @@ sensitivity_results_VCV <- lapply(study_list, function(S) {
 
 print(sensitivity_results_VCV)
 
-# S004 is highly influential (>100% change, sign reversal)
+# S004 is highly influential (69%% change in estimate)
 # Author (D. Francis) noted poor performance was linked to poor diet stability
 
 ## Re-run MLMA without S004
