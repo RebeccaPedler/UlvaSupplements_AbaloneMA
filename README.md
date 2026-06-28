@@ -92,7 +92,7 @@ R script implementing the full MLMA, subsequent MLMR, publication bias testing, 
 
 ### `code/study_characteristics.R`
 
-R script used to summarise and visualise study characteristics across the full primary dataset, including species, *Ulva* inclusion levels, experimental duration, and geographic distribution of included studies.
+R script used to clean data, summarise and visualise study characteristics across the full primary dataset, including species, *Ulva* inclusion levels, experimental duration, and geographic distribution of included studies.
 
 ## Data
 
