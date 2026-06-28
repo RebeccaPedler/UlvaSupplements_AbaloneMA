@@ -7,7 +7,7 @@
 ## Output is stored as R object for incorporation in teh main data set.
 
 ## Install packages
-Install.packages(c("MetaDigitise", "here"))
+install.packages(c("MetaDigitise", "here"))
 
 ## Load required libraries
 library(here)
