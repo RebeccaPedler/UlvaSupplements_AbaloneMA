@@ -12,7 +12,8 @@ packages_cran <- c(
   "ggcorrplot",    
   "patchwork",     
   "car",
-  "devtools"           
+  "devtools",
+  "ggtext"
 )
 
 # Install and load any missing CRAN packages
