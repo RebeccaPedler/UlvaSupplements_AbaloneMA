@@ -86,13 +86,13 @@ R script used to identify and remove duplicate records from the combined Web of 
 
 R script used to extract numerical data from figures in the `data/figures_for_extraction/` subfolder using the `metaDigitiser` package. Produces extracted data suitable for inclusion in the primary analysis dataset.
 
-### `code/meta_analysis.R`
-
-R script implementing the full MLMA, subsequent MLMR, publication bias testing, and figure generation.
-
 ### `code/study_characteristics.R`
 
 R script used to clean data, summarise and visualise study characteristics across the full primary dataset, including species, *Ulva* inclusion levels, experimental duration, and geographic distribution of included studies.
+
+### `code/meta_analysis.R`
+
+R script implementing the full MLMA, subsequent MLMR, publication bias testing, and figure generation.
 
 ## Data
 
