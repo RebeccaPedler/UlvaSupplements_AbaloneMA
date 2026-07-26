@@ -761,32 +761,32 @@ mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows wit
 # S008.2, S008.8, S008.14 CONTROL_SE entered as 0.01, true SE is 0.07
 # S004.27 control_mean and control_SE data entered into treatment_mean and treatment_SE
 
-##Let's fix errors
-mydata <- mydata %>%
-  mutate(
-    # Fix incorrect control_SE
-    control_SE = case_when(
-      ES_ID %in% c("S001.16", "S001.18", "S001.26") ~ 0.07,
-      ES_ID %in% c("S008.2", "S008.8", "S008.14") ~ 0.07,
-      ES_ID == "S004.22"                          ~ 0.10,
-      TRUE ~ control_SE
-    ),
+## Let's fix errors
+779    mydata <- mydata %>%
+780      mutate(
+781        # Fix incorrect control_SE
+782        control_SE = case_when(
+783          ES_ID %in% c("S001.16", "S001.18", "S001.26") ~ 0.07,
+784          ES_ID %in% c("S008.2", "S008.8", "S008.14") ~ 0.07,
+785          ES_ID == "S004.22"                          ~ 0.10,
+786          TRUE ~ control_SE
+787        ),
+788
+789        # Fix incorrect treatment_mean
+790        treatment_mean = case_when(
+791          ES_ID == "S004.27" ~ 99.0,
+792          TRUE ~ treatment_mean
+793        ),
+794
+795        #Fix incorrect treatment_SE
+796        treatment_SE = case_when(
+797          ES_ID == "S004.27" ~ 0.70,
+804          ES_ID == "S004.22" ~ 0.0922,
+805          TRUE ~ treatment_SE
+806        )
+807      )
 
-    # Fix incorrect treatment_mean
-    treatment_mean = case_when(
-      ES_ID == "S004.27" ~ 99.0,
-      TRUE ~ treatment_mean
-    ),
-
-    #Fix incorrect treatment_SE
-    treatment_SE = case_when(
-      ES_ID == "S004.27" ~ 0.70,
-      ES_ID == "S004.22" ~ 0.00,
-      TRUE ~ treatment_SE
-    )
-  )
-
-##Recalculate SD and CV for ammended ES_ID
+## Recalculate SD and CV for ammended ES_ID
 # Define amended ES_IDs 
 amended_ES <- c(
   "S001.16", "S001.18", "S001.26",
@@ -866,7 +866,7 @@ mydata %>%
   dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
 ### Save cleaned data for meta-analysis
-write_csv(here("Data", "cleaned_data_for_meta_analysis.csv")
+write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
 
 ### End of script ###
 
