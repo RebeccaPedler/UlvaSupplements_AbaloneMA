@@ -901,7 +901,7 @@ mydata %>%
   dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
 ### Save cleaned data for meta-analysis
-write_csv(mydata, (here("Data", "cleaned_data_for_meta_analysis.csv"))
+write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
 
 ### End of script ###
 
