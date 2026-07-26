@@ -413,7 +413,7 @@ journal_year <- ggplot(
     legend.text  = element_text(size = 12),
     axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
     axis.text.y = element_text(size = 14),
-    panel.grid.major = element_line(color = "grey85"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(color = "black"),
     axis.ticks = element_line(color = "black", size = 0.3),
@@ -622,7 +622,7 @@ sankey_plot <- ggplot(
   )
 ) +
   geom_sankey(flow.alpha = 0.8, node.color = "transparent") +
-  geom_sankey_richlabel(size = 4, colour = "white", fill = "gray10", alpha = 0.6,
+  geom_sankey_richlabel(size = 5, colour = "white", fill = "gray10", alpha = 0.6,
                          label.color = NA, label.padding = grid::unit(rep(2, 4), "pt")) +
   theme_sankey(base_size = 10) +
   labs(x = NULL) +
@@ -631,7 +631,7 @@ sankey_plot <- ggplot(
   plot.title = element_text(hjust = 0.5),
   axis.text.x.top = ggtext::element_markdown(
     colour = "black",
-    size = 10
+    size = 12
     )
   ) +
   scale_x_discrete(
