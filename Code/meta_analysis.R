@@ -1088,4 +1088,122 @@ ulva_inclusion <- bubble_plot(res_meta_dose_plot,
 ulva_inclusion
 ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion, width = 10, height = 6, units = "in")
 
+### Save all model outputs as CSV files
+# Create output directory
+dir.create(here("Outputs"), showWarnings = FALSE)
+
+## Helper 1: coefficient-level table from an rma.mv model
+tidy_rma <- function(model, model_name, dataset = NA_character_) {
+  data.frame(
+    model    = model_name,
+    dataset  = dataset,
+    term     = rownames(model$beta),
+    estimate = as.numeric(model$beta),
+    se       = as.numeric(model$se),
+    stat     = as.numeric(model$zval),
+    df       = if (!is.null(model$ddf)) as.numeric(model$ddf) else NA_real_,
+    pval     = as.numeric(model$pval),
+    ci_lb    = as.numeric(model$ci.lb),
+    ci_ub    = as.numeric(model$ci.ub),
+    pct_change    = (exp(as.numeric(model$beta))  - 1) * 100,
+    pct_change_lb = (exp(as.numeric(model$ci.lb)) - 1) * 100,
+    pct_change_ub = (exp(as.numeric(model$ci.ub)) - 1) * 100,
+    row.names = NULL,
+    stringsAsFactors = FALSE
+  )
+}
+
+## Helper 2: model-level summary 
+glance_rma <- function(model, model_name, dataset = NA_character_) {
+  sigma     <- model$sigma2
+  mean_vi   <- mean(diag(model$V), na.rm = TRUE)
+  total_var <- sum(sigma) + mean_vi
+  I2_total  <- sum(sigma) / total_var * 100
+
+  R2_marginal <- tryCatch(
+    as.numeric(orchaRd::r2_ml(model)["R2_marginal"]),
+    error = function(e) NA_real_
+  )
+
+  data.frame(
+    model       = model_name,
+    dataset     = dataset,
+    k           = model$k,
+    n_levels    = paste(model$s.nlevels, collapse = "/"),
+    n_coef      = model$p,
+    sigma2_1    = if (length(sigma) >= 1) sigma[1] else NA_real_,
+    sigma2_2    = if (length(sigma) >= 2) sigma[2] else NA_real_,
+    I2_total    = I2_total,
+    R2_marginal = R2_marginal,
+    QE          = model$QE,
+    QE_pval     = model$QEp,
+    QM          = model$QM,
+    QM_pval     = model$QMp,
+    logLik      = as.numeric(logLik(model)),
+    AIC         = AIC(model),
+    BIC         = BIC(model),
+    row.names   = NULL,
+    stringsAsFactors = FALSE
+  )
+}
+
+## MLMA models 
+  mlma_models <- list(
+  list("Overall",                          "full", res_3L_all),
+  list("Overall (S004 removed)",           "sens", res_3L_sens),
+  list("Feed behaviour",                   "sens", results_mlma[["feed behaviour"]]$model),
+  list("Growth performance",               "sens", results_mlma[["growth performance"]]$model),
+  list("Nutrient utilisation",             "sens", results_mlma[["nutrient utilisation"]]$model),
+  list("Nutrient utilisation (PD/ED removed)", "sens", res_nodeposition)
+)
+
+# Drop any NULL models 
+mlma_models <- Filter(function(m) !is.null(m[[3]]), mlma_models)
+
+mlma_coefs  <- do.call(rbind, lapply(mlma_models, function(m) tidy_rma(m[[3]],  m[[1]], m[[2]])))
+mlma_glance <- do.call(rbind, lapply(mlma_models, function(m) glance_rma(m[[3]], m[[1]], m[[2]])))
+
+write_csv(mlma_coefs,  here("Outputs", "MLMA_coefficients.csv"))
+write_csv(mlma_glance, here("Outputs", "MLMA_model_summary.csv"))
+
+## MLMR models (moderator tests) 
+# Fixed models built manually - continuous-moderator subgroup models pulled
+mlmr_models <- list(
+  list("Species (fixed)",                       "full", res_species_fixed),
+  list("Species (random)",                      "full", res_species_random),
+  list("Outcome category",                      "full", res_meta_reg),
+  list("Outcome category (contrasts, ref = feed)",   "full", res_meta_reg_contrasts),
+  list("Outcome category (contrasts, ref = growth)", "full", res_meta_reg_contrasts_gp),
+  list("Outcome category",                      "sens", res_meta_reg_sens),
+  list("Outcome category (contrasts, ref = feed)",   "sens", res_meta_reg_sens_contrasts),
+  list("Outcome category (contrasts, ref = growth)", "sens", res_meta_reg_sens_contrasts_gp),
+  list("Dose + dose^2 + initial size (overall)",     "sens", size_MLMR$model),
+  list("Dose + dose^2 + duration (overall)",         "sens", duration_MLMR$model),
+  list("Dose + dose^2 + size + duration (overall)",  "sens", all_MLMR$model),
+  list("Dose + dose^2 (unscaled, bubble plot)",      "sens", res_meta_dose_plot)
+)
+
+# Add the duration and size MLMRs by outcome-category subgroup
+for (cat in names(results_mlmr_duration)) {
+  mlmr_models <- c(mlmr_models, list(
+    list(paste0("Dose + dose^2 + duration (", cat, ")"), "sens",
+         results_mlmr_duration[[cat]]$model)
+  ))
+}
+for (cat in names(results_mlmr_size)) {
+  mlmr_models <- c(mlmr_models, list(
+    list(paste0("Dose + dose^2 + initial size (", cat, ")"), "sens",
+         results_mlmr_size[[cat]]$model)
+  ))
+}
+
+mlmr_models <- Filter(function(m) !is.null(m[[3]]), mlmr_models)
+
+mlmr_coefs  <- do.call(rbind, lapply(mlmr_models, function(m) tidy_rma(m[[3]],  m[[1]], m[[2]])))
+mlmr_glance <- do.call(rbind, lapply(mlmr_models, function(m) glance_rma(m[[3]], m[[1]], m[[2]])))
+
+write_csv(mlmr_coefs,  here("Outputs", "MLMR_coefficients.csv"))
+write_csv(mlmr_glance, here("Outputs", "MLMR_model_summary.csv"))
+
+
 ### End of script ###
