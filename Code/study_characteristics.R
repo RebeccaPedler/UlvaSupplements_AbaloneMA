@@ -259,9 +259,10 @@ bubble_plot_species <- ggplot(
       hjust = 0.5,            
       vjust = 1,       
       face = "italic",
-      margin = margin(t = 10)  
+      margin = margin(t = 10),   
+      size = 12  
     ),
-    axis.text.y = element_text(size = 10),
+    axis.text.y = element_text(size = 12),
     plot.title = element_text(face = "bold", vjust = 0.5),
     panel.grid.major = element_line(color = "grey85"),
     panel.grid.minor = element_blank(),
@@ -273,9 +274,9 @@ bubble_plot_species <- ggplot(
   ) +
   coord_cartesian(clip = "off")
 
-## Show the plot:
+# Show the plot
 bubble_plot_species
-#Save plot
+# Save plot
 ggsave(here("Figures", "bubble_plot_species.png"), width = 16, height = 9, units = "in")
 
 ## Recode country names to match rnaturalearth conventions
@@ -420,7 +421,7 @@ journal_year <- ggplot(
     panel.background = element_blank()
   )
 
-journal_year  #Print plot
+journal_year  # Print plot
 ggsave(here("Figures","journal_year.png"), width = 13, height = 11, units = "in")   
 
 ### Check study validity metrics (study-level variables)
@@ -435,7 +436,6 @@ table(mydata$study_ID, mydata$funding_disclosed)  #all yes
 table(mydata$study_ID, mydata$funding_potential_COI)  #8/11 yes, 3/11 no
 table(mydata$study_ID, mydata$COI_disclosed)  #3/11 have COI statement, with 1 COI disclosed
 table(mydata$study_ID, mydata$publication_type) #3/11 Grey literature, 8/11 Primary literature
-
 
 ## Simple frequency tables for each study design characteristics for numbers of effect sizes and numbers of studies per moderator value:
 
@@ -502,7 +502,7 @@ table(mydata$experimental_system, mydata$outcome_category)
 table(mydata$experimental_unit, mydata$outcome_category)
 
 ### Create Sankey plot to investigate moderator overlap and/or potential collinearity 
-
+ 
 # The Sankey plot uses the ggsankey package (Sjoberg, github.com/davidsjoberg/ggsankey), loaded above.
 ## Create bins for continious numerical data and order ascending
 mydata_alluvial <- mydata %>%
@@ -527,27 +527,31 @@ mydata_alluvial <- mydata %>%
       labels = c("≤1 g", "1–10 g", "10–50 g", ">50 g"),
       right = TRUE
     ))
-
+ 
 # Makes labels ascending order
     mydata_allsuvial <- mydata_alluvial %>%
     mutate(
     dose_cat = factor(dose_cat, levels = c("≤2.5%", "2.5–5%", "5–10%", "10-20%", "20-30%", ">30%")),
     duration_cat = factor(duration_cat, levels = c("≤30 d", "30-60 d", "60–120 d", "120–180 d", ">180 d")),
     size_cat = factor(size_cat, levels = c("≤1 g", "1–10 g", "10–50 g", ">50 g")))
-
+ 
 ## Prepare species names 
 # Check names 
 unique(mydata_alluvial$species)
-
+ 
  # Replace 'Haliotis ' with 'H. '
 mydata_alluvial <- mydata_alluvial %>%
   mutate(species = str_replace(species, "^Haliotis ", "H. "))
-
+ 
+# Remove underscores from species names
+mydata_alluvial <- mydata_alluvial %>%
+  mutate(species = gsub("_x_", " \u00d7 ", species))
+ 
 ### Create Plot     
 # pre-process
 mydata_alluvial <- mydata_alluvial %>%
   dplyr::select(experimental_system,  study_conditions, intervention_preparation, species, dose_cat, duration_cat, size_cat) #select columns for the plot
-
+ 
 # Create long object
 sankey_long <- make_long(
   mydata_alluvial,
@@ -559,7 +563,7 @@ sankey_long <- make_long(
   duration_cat,
   size_cat
 )
-
+ 
 str(sankey_long)
 
 # Define levels for each node and order 
@@ -586,6 +590,25 @@ sankey_long <- sankey_long %>%
     next_node = factor(next_node, levels = node_levels)
   )
 
+# build a markdown-formatted label column so species names and "Ulva" render in italics
+
+sankey_long$node_label <- as.character(sankey_long$node)
+sankey_long$node_label <- gsub(">", "&gt;", sankey_long$node_label, fixed = TRUE)
+sankey_long$node_label <- gsub("(H\\. [a-z]+(_x_H\\. [a-z]+)?)", "*\\1*", sankey_long$node_label)
+sankey_long$node_label <- gsub("(Ulva)", "*\\1*", sankey_long$node_label)
+
+geom_sankey_richlabel <- function(mapping = NULL, data = NULL, position = "identity",
+                                   na.rm = FALSE, show.legend = NA, space = NULL,
+                                   type = "sankey", width = 0.1, inherit.aes = TRUE, ...) {
+  label.aes <- list(...)
+  ggplot2::layer(
+    stat = ggsankey:::StatSankeyText, data = data, mapping = mapping,
+    geom = ggtext::GeomRichText, position = position, show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = purrr::flatten(list(na.rm = na.rm, width = width, space = space, type = type, label.aes))
+  )
+}
+
 # Create plot
 sankey_plot <- ggplot(
   sankey_long,
@@ -595,34 +618,39 @@ sankey_plot <- ggplot(
     node = node,
     next_node = next_node,
     fill = factor(node),
-    label = node
+    label = node_label
   )
 ) +
   geom_sankey(flow.alpha = 0.8, node.color = "transparent") +
-  geom_sankey_label(size = 4, color = "white", fill = "gray10", alpha = 0.6) +
+  geom_sankey_richlabel(size = 4, colour = "white", fill = "gray10", alpha = 0.6,
+                         label.color = NA, label.padding = grid::unit(rep(2, 4), "pt")) +
   theme_sankey(base_size = 10) +
   labs(x = NULL) +
   theme(
-    legend.position = "none",
-    plot.title = element_text(hjust = .5),
-    axis.text.x = ggtext::element_markdown(color = "black", size = 10)
+  legend.position = "none",
+  plot.title = element_text(hjust = 0.5),
+  axis.text.x.top = ggtext::element_markdown(
+    colour = "black",
+    size = 10
+    )
   ) +
   scale_x_discrete(
-    labels = c(
-      "Experimental \n System",
-      "Study \n conditions",
-      "Ulva \n preparation",
-      "Species",
-      "Ulva dose \n (%)",
-      "Study duration \n (days)",
-      "Initial abalone \n size (g)"
-    ),
-    position = "top"
-  )
+  labels = c(
+    "Experimental<br>System",
+    "Study<br>conditions",
+    "<i>Ulva</i><br>preparation",
+    "Species",
+    "<i>Ulva</i> inclusion level<br>(%)",
+    "Study duration<br>(days)",
+    "Initial abalone<br>size (g)"
+  ),
+  position = "top"
+)
 
 # View plot 
 sankey_plot
-#Save plot
+
+# Save plot
 ggsave(here("Figures","Sankey_plot.png"), width = 20, height = 10, units = "in")
 
 ## Check and fix proportional_data column based on units:
@@ -762,29 +790,29 @@ mydata %>% filter(treatment_CV > 0.5 | control_CV > 0.5) %>% View() # 9 rows wit
 # S004.27 control_mean and control_SE data entered into treatment_mean and treatment_SE
 
 ## Let's fix errors
-779    mydata <- mydata %>%
-780      mutate(
-781        # Fix incorrect control_SE
-782        control_SE = case_when(
-783          ES_ID %in% c("S001.16", "S001.18", "S001.26") ~ 0.07,
-784          ES_ID %in% c("S008.2", "S008.8", "S008.14") ~ 0.07,
-785          ES_ID == "S004.22"                          ~ 0.10,
-786          TRUE ~ control_SE
-787        ),
-788
-789        # Fix incorrect treatment_mean
-790        treatment_mean = case_when(
-791          ES_ID == "S004.27" ~ 99.0,
-792          TRUE ~ treatment_mean
-793        ),
-794
-795        #Fix incorrect treatment_SE
-796        treatment_SE = case_when(
-797          ES_ID == "S004.27" ~ 0.70,
-804          ES_ID == "S004.22" ~ 0.0922,
-805          TRUE ~ treatment_SE
-806        )
-807      )
+mydata <- mydata %>%
+      mutate(
+        # Fix incorrect control_SE
+        control_SE = case_when(
+          ES_ID %in% c("S001.16", "S001.18", "S001.26") ~ 0.07,
+          ES_ID %in% c("S008.2", "S008.8", "S008.14") ~ 0.07,
+          ES_ID == "S004.22"                          ~ 0.10,
+          TRUE ~ control_SE
+        ),
+
+        # Fix incorrect treatment_mean
+        treatment_mean = case_when(
+          ES_ID == "S004.27" ~ 99.0,
+          TRUE ~ treatment_mean
+        ),
+
+        #Fix incorrect treatment_SE
+        treatment_SE = case_when(
+          ES_ID == "S004.27" ~ 0.70,
+          ES_ID == "S004.22" ~ 0.0922,
+          TRUE ~ treatment_SE
+        )
+      )
 
 ## Recalculate SD and CV for ammended ES_ID
 # Define amended ES_IDs 
@@ -866,7 +894,7 @@ mydata %>%
   dplyr::select(outcome_long, treatment_mean, treatment_SD, control_mean, control_SD)
 
 ### Save cleaned data for meta-analysis
-write_csv(mydata, here("Data", "cleaned_data_for_meta_analysis.csv"))
+write_csv(mydata, (here("mydata", "cleaned_data_for_meta_analysis.csv"))
 
 ### End of script ###
 
