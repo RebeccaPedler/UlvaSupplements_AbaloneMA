@@ -67,7 +67,7 @@ clean_data$publication_year <- as.numeric(scale(clean_data$publication_year))
 clean_data$intervention_dose <- as.numeric(scale(clean_data$intervention_dose))
 clean_data$study_duration_days <- as.numeric(scale(clean_data$study_duration_days))
 clean_data$initial_size_g <- as.numeric(scale(clean_data$initial_size_g))
-clean_data$intervention_dose2 <- as.numeric(scale(clean_data$intervention_dose2))
+clean_data$intervention_dose2 <- clean_data$intervention_dose^2
 
 # Create check to make sure that direction of lnRR are biologically correct
 clean_data %>%
@@ -571,7 +571,7 @@ clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 # Rescale continious moderators in sensitive dataset 
 clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year_raw))
 clean_data_sens$intervention_dose <- as.numeric(scale(clean_data_sens$intervention_dose_raw))
-clean_data_sens$intervention_dose2 <- as.numeric(scale(clean_data_sens$intervention_dose2_raw))
+clean_data_sens$intervention_dose2 <- clean_data_sens$intervention_dose^2
 clean_data_sens$study_duration_days <- as.numeric(scale(clean_data_sens$study_duration_days_raw))
 clean_data_sens$initial_size_g <- as.numeric(scale(clean_data_sens$initial_size_g_raw))
 
