@@ -1032,6 +1032,10 @@ setting_MLMR <- run_mlmr_fe(clean_data_sens, outcome_cat = NULL, fixed_effects =
 
 summary(setting_MLMR$model)
 
+# Run ANOVA to see if settings differ from each other
+setting_contrast <- anova(setting_MLMR$model, L = c(0, 0, 1, -1))
+setting_contrast
+
 r2_setting_all <- r2_ml(setting_MLMR$model, res_3L_sens)
 cat("R2 setting MLMR:     ", r2_setting_all, "\n")
 
