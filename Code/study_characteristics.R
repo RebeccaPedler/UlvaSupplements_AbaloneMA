@@ -610,6 +610,7 @@ geom_sankey_richlabel <- function(mapping = NULL, data = NULL, position = "ident
 }
 
 # Create plot
+# Create plot
 sankey_plot <- ggplot(
   sankey_long,
   aes(
@@ -622,8 +623,14 @@ sankey_plot <- ggplot(
   )
 ) +
   geom_sankey(flow.alpha = 0.8, node.color = "transparent") +
-  geom_sankey_richlabel(size = 5, colour = "white", fill = "gray10", alpha = 0.6,
-                         label.color = NA, label.padding = grid::unit(rep(2, 4), "pt")) +
+geom_sankey_richlabel(
+  size = 5,
+  colour = "black", 
+  fill = "white",   
+  alpha = 1,
+  label.color = NA,
+  label.padding = grid::unit(rep(2, 4), "pt")
+  ) +
   theme_sankey(base_size = 10) +
   labs(x = NULL) +
   theme(
@@ -631,7 +638,7 @@ sankey_plot <- ggplot(
   plot.title = element_text(hjust = 0.5),
   axis.text.x.top = ggtext::element_markdown(
     colour = "black",
-    size = 12
+    size = 13
     )
   ) +
   scale_x_discrete(
@@ -649,7 +656,7 @@ sankey_plot <- ggplot(
 
 # View plot 
 sankey_plot
-
+                   
 # Save plot
 ggsave(here("Figures","Sankey_plot.png"), width = 20, height = 10, units = "in")
 
