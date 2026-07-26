@@ -1024,6 +1024,19 @@ cat("R2 combined MLMR:    ", r2_combined_all, "\n")
 ## Dose-response estimates are robust regardless of whether initial_size_g or
 ## study_duration_days is retained (AIC difference < 2). Inspect by subgroup.
 
+## Run additional model to check if abalone responded differently if experiments were conducted on a farm vs laboratory
+
+fixed_vars_setting <- c("intervention_dose", "intervention_dose2", "experimental_system")
+
+setting_MLMR <- run_mlmr_fe(clean_data_sens, outcome_cat = NULL, fixed_effects = fixed_vars_setting)
+
+summary(setting_MLMR$model)
+
+r2_setting_all <- r2_ml(setting_MLMR$model, res_3L_sens)
+cat("R2 setting MLMR:     ", r2_setting_all, "\n")
+
+## Run remaining MLMR
+
 outcome_list_all <- c("overall", "feed behaviour", "growth performance", "nutrient utilisation")
 
 # Duration models by subgroup
@@ -1178,6 +1191,7 @@ mlmr_models <- list(
   list("Outcome category (contrasts, ref = feed)",   "sens", res_meta_reg_sens_contrasts),
   list("Outcome category (contrasts, ref = growth)", "sens", res_meta_reg_sens_contrasts_gp),
   list("Dose + dose^2 + initial size (overall)",     "sens", size_MLMR$model),
+  list("Dose + dose^2 + experimental system (overall)", "sens", setting_MLMR$model),
   list("Dose + dose^2 + duration (overall)",         "sens", duration_MLMR$model),
   list("Dose + dose^2 + size + duration (overall)",  "sens", all_MLMR$model),
   list("Dose + dose^2 (unscaled, bubble plot)",      "sens", res_meta_dose_plot)
@@ -1204,6 +1218,5 @@ mlmr_glance <- do.call(rbind, lapply(mlmr_models, function(m) glance_rma(m[[3]],
 
 write_csv(mlmr_coefs,  here("Outputs", "MLMR_coefficients.csv"))
 write_csv(mlmr_glance, here("Outputs", "MLMR_model_summary.csv"))
-
 
 ### End of script ###
