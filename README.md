@@ -83,24 +83,22 @@ UlvaSupplements_AbaloneMA/
 
 ## Reproducing the analysis
 
-The scripts are designed to be run in order, from the project root (paths are resolved with the `here` package):
+The scripts are designed to be run in the following order:
 
 1. `Code/deduplicate.R` — deduplicate the combined Web of Science and SCOPUS export.
 2. `Code/metaDigitiser.R` — extract numerical values from published figures.
 3. `Code/study_characteristics.R` — clean and check the raw data, summarise study characteristics, and write `Data/cleaned_data_for_meta_analysis.csv`.
 4. `Code/meta_analysis.R` — calculate effect sizes, fit the meta-analytic models, and produce the figures and model-output tables.
 
-Analyses were run in R using `metafor` for model fitting and `orchaRd` for effect-size visualisation and variance-component estimates, alongside `tidyverse`, `here`, `patchwork`, `ggcorrplot`, `ggtext`, `sf`, `rnaturalearth`, and `ggsankey`. The `orchaRd` and `ggsankey` packages are installed from GitHub within the scripts.
-
 ## Code
 
 ### `Code/deduplicate.R`
 
-Identifies and removes duplicate records from the combined Web of Science and SCOPUS search export (`WOS_and_SCOPUS_combined_11092025.csv`). Deduplication is based on the title field after standardising case and removing punctuation and extra spaces. The deduplicated records used for screening are provided in `Searches/primary_literature/WOS_and_SCOPUS_duplicates_removed_11092025.csv`.
+Identifies and removes duplicate records from the combined Web of Science and SCOPUS search export (`WOS_and_SCOPUS_combined_11092025.csv`). The deduplicated records used for screening are provided in `Searches/primary_literature/WOS_and_SCOPUS_duplicates_removed_11092025.csv`.
 
 ### `Code/metaDigitiser.R`
 
-Extracts numerical data from published figures held in `Data/figures_for_extraction/` using the `metaDigitise` package. The script records the manual digitising inputs used for each figure so that the extraction can be reproduced.
+Example workflow for extracting numerical data from published figures held in `Data/figures_for_extraction/` using the `metaDigitise` package.
 
 ### `Code/study_characteristics.R`
 
@@ -108,7 +106,7 @@ Cleans and checks the raw dataset (missing values, coefficient-of-variation scre
 
 ### `Code/meta_analysis.R`
 
-Calculates log response-ratio (lnRR) effect sizes and their variances, fits the multi-level meta-analytic (MLMA) and meta-regression (MLMR) models, tests for publication bias, runs leave-one-out and other sensitivity analyses, generates the figures, and exports the model-output tables to `Outputs/`.
+Calculates log response-ratio (lnRR) effect sizes and their variances, fits the multi-level meta-analytic (MLMA) and meta-regression (MLMR) models, tests for publication bias, runs leave-one-out and other sensitivity analyses, generates  figures, and exports the model outputs to `Outputs/`.
 
 ## Data
 
@@ -134,7 +132,7 @@ Figures used for numerical data extraction via `metaDigitise`, organised by firs
 
 ## Outputs
 
-Model-output tables written by `meta_analysis.R`. Effect sizes are on the lnRR scale; the coefficient tables also report a back-transformed percentage change with 95% confidence interval, which is interpretable for pooled and categorical estimates but not for continuous-moderator slopes (*Ulva* dose, study duration, initial size).
+Model-output tables written by `meta_analysis.R`. 
 
 ### `Outputs/MLMA_coefficients.csv`
 
@@ -150,7 +148,7 @@ Coefficient-level estimates from the meta-regression models: species (as a fixed
 
 ### `Outputs/MLMR_model_summary.csv`
 
-Model-level summaries for the meta-regression models, including marginal *R²* and the omnibus test of moderators.
+Model-level summaries for the meta-regression models, including marginal *R²* and the test of moderators.
 
 ## Searches
 
