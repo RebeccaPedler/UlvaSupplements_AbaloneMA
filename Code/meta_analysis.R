@@ -568,14 +568,14 @@ print(sensitivity_results_VCV)
 # Create filtered dataset
 clean_data_sens <- clean_data %>% filter(study_ID != "S004")
 
-# Rescale continious moderators in sensitive dataset 
+# Rescale continious moderators in the reduced dataset 
 clean_data_sens$publication_year <- as.numeric(scale(clean_data_sens$publication_year_raw))
 clean_data_sens$intervention_dose <- as.numeric(scale(clean_data_sens$intervention_dose_raw))
 clean_data_sens$intervention_dose2 <- clean_data_sens$intervention_dose^2
 clean_data_sens$study_duration_days <- as.numeric(scale(clean_data_sens$study_duration_days_raw))
 clean_data_sens$initial_size_g <- as.numeric(scale(clean_data_sens$initial_size_g_raw))
 
-# VCV for sensitive dataset
+# VCV for the reduced dataset
 VCV_sens <- vcalc(
   vi      = vi_lnRR,
   cluster = cohort_ID,
@@ -584,7 +584,7 @@ VCV_sens <- vcalc(
   data    = clean_data_sens
 )
 
-# 3-level MLMA — sensitive dataset
+# 3-level MLMA — the reduced dataset
 res_3L_sens <- rma.mv(yi = lnRR, V = VCV_sens,
                       random = ~ 1 | study_ID / ES_ID,
                       test   = "t",
@@ -597,7 +597,7 @@ dim(res_3L_sens$V)
 is.matrix(res_3L_sens$V)
 str(res_3L_sens$V)
 
-# Comparison table: full vs sensitive model
+# Comparison table: full vs the reduced model
 sensitivity_compare <- data.frame(
   Model      = c("Full", "S004 removed"),
   k          = c(res_3L_all$k,       res_3L_sens$k),
@@ -613,11 +613,11 @@ sensitivity_compare <- data.frame(
 )
 sensitivity_compare
 
-# Variance components — sensitive model
+# Variance components — the reduced model
 I2_sens <- calc_I2_3level(res_3L_sens)
 print(I2_sens)
 
-# Orchard plot — sensitive dataset
+# Orchard plot — the reduced dataset
 sens_data_plot <- run_orchard_plot(
   model = res_3L_sens,
   I2    = I2_sens,
@@ -626,7 +626,7 @@ sens_data_plot <- run_orchard_plot(
 sens_data_plot
 ggsave(here("Figures", "sens_data_orchard_plot.png"), plot = sens_data_plot, width = 9, height = 8, units = "in")
 
-# Publication bias — sensitive dataset
+# Publication bias — the reduced dataset
 results_sens_data <- run_bias_models(
   data           = clean_data_sens,
   vcv            = VCV_sens,
@@ -636,12 +636,12 @@ results_sens_data <- run_bias_models(
                      "study_duration_days")
 )
 
-# Print results — sensitive dataset
+# Print results — the reduced dataset
 summary(results_sens_data$egger_model)
 summary(results_sens_data$year_model)
 summary(results_sens_data$multi_model)
 
-# Save publication bias plots — sensitive dataset
+# Save publication bias plots — the reduced dataset
 results_sens_data$plot_egger
 ggsave(here("Figures", "plot_egger_sens.png"), plot = results_sens_data$plot_egger, dpi = 300, width = 8, height = 6, units = "in")
 
@@ -654,7 +654,7 @@ ggsave(here("Figures", "plot_multi_egger_sens.png"), plot = results_sens_data$pl
 results_sens_data$plot_multi_year
 ggsave(here("Figures", "plot_multi_year_sens.png"), plot = results_sens_data$plot_multi_year, dpi = 300, width = 8, height = 6, units = "in")
 
-# Stacked combined plot — sensitive dataset
+# Stacked combined plot — the reduced dataset
 combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year +
   plot_annotation(
     tag_levels = list(c("A)", "B)")),
@@ -664,7 +664,7 @@ combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year
 combined_plot_sens
 ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
 
-# Funnel plot — sensitive dataset
+# Funnel plot — the reduced dataset
 png(here("Figures", "funnel_plot_sens.png"), width = 8, height = 6, units = "in", res = 600)
 funnel(res_3L_sens,
        yaxis    = "seinv",
@@ -749,9 +749,9 @@ all_data_mlmr_plot <- run_orchard_plot(
 all_data_mlmr_plot
 ggsave(here("Figures", "all_data_mlmr_plot.png"), plot = all_data_mlmr_plot, dpi = 500, width = 9, height = 8, units = "in")
 
-## Sensitive dataset 
+## the reduced dataset 
 
-# Model A: no-intercept — estimate per outcome category (sensitive dataset)
+# Model A: no-intercept — estimate per outcome category (the reduced dataset)
 res_meta_reg_sens <- rma.mv(yi = lnRR, V = VCV_sens,
   mods   = ~ 0 + outcome_category,
   random = list(~ 1 | study_ID / ES_ID),
@@ -761,7 +761,7 @@ res_meta_reg_sens <- rma.mv(yi = lnRR, V = VCV_sens,
 )
 res_meta_reg_sens
 
-# Model B: with-intercept — contrasts between outcome categories (sensitive dataset)
+# Model B: with-intercept — contrasts between outcome categories (the reduced dataset)
 # Reference level = feed behaviour
 res_meta_reg_sens_contrasts <- rma.mv(yi = lnRR, V = VCV_sens,
   mods   = ~ outcome_category,
@@ -776,7 +776,7 @@ res_meta_reg_sens_contrasts
 # outcome_categorygrowth performance     = growth vs feed behaviour
 # outcome_categorynutrient utilisation   = nutrient utilisation vs feed behaviour
 
-# Re-level to get growth performance as reference (sensitive dataset)
+# Re-level to get growth performance as reference (the reduced dataset)
 clean_data_sens$outcome_category <- relevel(factor(clean_data_sens$outcome_category),
                                             ref = "growth performance")
 
@@ -799,16 +799,16 @@ clean_data_sens$outcome_category <- factor(clean_data_sens$outcome_category,
                                                       "growth performance",
                                                       "nutrient utilisation"))
 
-# R² and variance components for sensitive MLMR (no-intercept model)
+# R² and variance components for the reduced MLMR (no-intercept model)
 I2_sens_mlmr <- calc_I2_3level(res_meta_reg_sens)
 print(I2_sens_mlmr)
 
-# Orchard plot — sensitive dataset, categorical (uses with-intercept model)
+# Orchard plot — the reduced dataset, categorical (uses with-intercept model)
 sens_mlmr_plot <- run_orchard_plot(
   model = res_meta_reg_sens_contrasts,
   I2    = I2_sens_mlmr,
   mod   = "outcome_category",
-  title = "Sensitive dataset — outcome category (S004 removed)"
+  title = "the reduced dataset — outcome category (S004 removed)"
 )
 sens_mlmr_plot
 ggsave(here("Figures", "sens_mlmr_plot.png"), plot = sens_mlmr_plot, dpi = 300, width = 9, height = 8, units = "in")
