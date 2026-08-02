@@ -298,7 +298,11 @@ run_orchard_plot <- function(model, I2,
     ggtitle(title) +
     scale_fill_manual(values = colour) +
     scale_colour_manual(values = colour) +
-    scale_y_continuous(limits = y_limits)
+    scale_y_continuous(limits = y_limits) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
   return(p)
 }
 
@@ -438,25 +442,42 @@ run_bias_models <- function(data,
                          mod   = "sqrt_inv_e_n",
                          group = study_id,
                          xlab  = "Square root of inverse effective sample size",
-                         ylab  = "Effect size (lnRR)")
+                         ylab  = "Effect size (lnRR)") +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
   
   p_year <- bubble_plot(year_mod,
                         mod   = year_var,
                         group = study_id,
                         xlab  = "Publication year (scaled)",
-                        ylab  = "Effect size (lnRR)")
+                        ylab  = "Effect size (lnRR)") +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
   
   if (!is.null(multi_mod)) {
     p_multi_egger <- bubble_plot(multi_mod,
                                  mod   = "sqrt_inv_e_n",
                                  group = study_id,
                                  xlab  = "Square root of inverse effective sample size",
-                                 ylab  = "Effect size (lnRR)")
+                                 ylab  = "Effect size (lnRR)") +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    ) 
+
     p_multi_year <- bubble_plot(multi_mod,
                                 mod   = year_var,
                                 group = study_id,
                                 xlab  = "Publication year (scaled)",
-                                ylab  = "Effect size (lnRR)")
+                                ylab  = "Effect size (lnRR)") +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
   }
   
   list(
