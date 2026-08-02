@@ -167,7 +167,7 @@ mydata <- mydata %>%
   )
 
 ## Check consistency of categorisation of outcomes:
-table(mydata$outcome_long, mydata$outcome_category) #Final weight categorised both as growth performance and feed behaviour - need to fix this.
+table(mydata$outcome_long, mydata$outcome_category) #Final weight categorised both as growth performance and feeding behaviour - need to fix this.
 
 ## Fix outcome category for "Final weight" to be "growth performance"
 mydata <- mydata %>%
@@ -237,7 +237,7 @@ bubble_plot_species <- ggplot(
     values = c(
       "growth performance" = "steelblue",
       "nutrient utilisation" = "grey70",
-      "feed behaviour" = "white"
+      "feeding behaviour" = "white"
     )
   ) +
   scale_x_discrete(labels = function(x) bubble_data$species_label[match(x, bubble_data$species)]) +
