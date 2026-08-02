@@ -643,7 +643,7 @@ geom_sankey_richlabel(
   ) +
   scale_x_discrete(
   labels = c(
-    "Experimental<br>System",
+    "Study<br>location",
     "Study<br>conditions",
     "<i>Ulva</i><br>preparation",
     "Species",
