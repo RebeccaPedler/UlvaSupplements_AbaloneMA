@@ -1,4 +1,4 @@
-# Project: Feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
+# Project: feeding behaviour, growth performance and nutrient utilisation of abalone with dietary Ulva sp. supplementation: A meta-analysis 
 
 ## Step 4: Running meta-analysis
 
@@ -85,13 +85,13 @@ clean_data %>%
 
 ## Check distribution of effect sizes overall and for each outcome category
 
-lnRR_feed    <- clean_data %>% filter(outcome_category == "feed behaviour")
+lnRR_feeding    <- clean_data %>% filter(outcome_category == "feeding behaviour")
 lnRR_growth  <- clean_data %>% filter(outcome_category == "growth performance")
 lnRR_nutrient <- clean_data %>% filter(outcome_category == "nutrient utilisation")
 
 # Create histograms
 hist(clean_data$lnRR,    breaks = 30, main = "all data")  
-hist(lnRR_feed$lnRR,    breaks = 30, main = "Feed behaviour")  
+hist(lnRR_feeding$lnRR,    breaks = 30, main = "feeding behaviour")  
 hist(lnRR_growth$lnRR,  breaks = 30, main = "Growth performance")  
 hist(lnRR_nutrient$lnRR, breaks = 30, main = "Nutrient utilisation") 
 
@@ -106,13 +106,13 @@ clean_data %>%
   head(5)  # Flag S004.12, S004.13, S004.4, S001.30 and S004.5 for sensitivity analysis
 
 # Check distribution of variances overall and for each outcome category
-vi_lnRR_feed    <- clean_data %>% filter(outcome_category == "feed behaviour")
+vi_lnRR_feeding    <- clean_data %>% filter(outcome_category == "feeding behaviour")
 vi_lnRR_growth  <- clean_data %>% filter(outcome_category == "growth performance")
 vi_lnRR_nutrient <- clean_data %>% filter(outcome_category == "nutrient utilisation")
 
 # Create histograms
 hist(clean_data$vi_lnRR,     breaks = 30, main = "all data")  
-hist(vi_lnRR_feed$vi_lnRR,   breaks = 30, main = "Feed behaviour")  
+hist(vi_lnRR_feeding$vi_lnRR,   breaks = 30, main = "feeding behaviour")  
 hist(vi_lnRR_growth$vi_lnRR, breaks = 30, main = "Growth performance")  
 hist(vi_lnRR_nutrient$vi_lnRR, breaks = 30, main = "Nutrient utilisation") 
 
@@ -126,7 +126,7 @@ clean_data %>%
          lnRR, vi_lnRR) %>%
   head(5) # Flag S004.11, S001.18, S006.23, S006.26, S008.3 for sensitivity analysis
 
-## Plot specific outcomes within each dataset (feed behaviour, nutrient utilisation, growth performance)
+## Plot specific outcomes within each dataset (feeding behaviour, nutrient utilisation, growth performance)
 
 # Create function for plots
 plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
@@ -193,7 +193,7 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
 }
 
 # Print all plots 
-combined_fb   <- plot_outcome_distribution(clean_data, "feed behaviour",x_label_pos = 1.2)
+combined_fb   <- plot_outcome_distribution(clean_data, "feeding behaviour",x_label_pos = 1.2)
 combined_fb
 combined_nutr <- plot_outcome_distribution(clean_data, "nutrient utilisation", x_label_pos = 1.2)
 combined_nutr
@@ -698,7 +698,7 @@ res_meta_reg <- rma.mv(yi = lnRR, V = VCV,
 res_meta_reg
 
 # Model B: with-intercept to compare between full dataset (full dataset)
-# Reference level = feed behaviour
+# Reference level = feeding behaviour
 res_meta_reg_contrasts <- rma.mv(yi = lnRR, V = VCV,
   mods   = ~ outcome_category,
   random = list(~ 1 | study_ID / ES_ID),
@@ -708,9 +708,9 @@ res_meta_reg_contrasts <- rma.mv(yi = lnRR, V = VCV,
 )
 res_meta_reg_contrasts
 
-# Intercept                              = feed behaviour estimate
-# outcome_categorygrowth performance     = growth vs feed behaviour
-# outcome_categorynutrient utilisation   = nutrient utilisation vs feed behaviour
+# Intercept                              = feeding behaviour estimate
+# outcome_categorygrowth performance     = growth vs feeding behaviour
+# outcome_categorynutrient utilisation   = nutrient utilisation vs feeding behaviour
 
 # Re-level to get growth performance as reference (nutrient vs growth contrast)
 clean_data$outcome_category <- relevel(factor(clean_data$outcome_category),
@@ -726,11 +726,11 @@ res_meta_reg_contrasts_gp <- rma.mv(yi = lnRR, V = VCV,
 res_meta_reg_contrasts_gp
 
 # Intercept                              = growth performance estimate
-# outcome_categoryfeed behaviour         = feed behaviour vs growth performance
+# outcome_categoryfeeding behaviour         = feeding behaviour vs growth performance
 # outcome_categorynutrient utilisation   = nutrient utilisation vs growth performance
 
 # Restore original factor ordering 
-clean_data$outcome_category <- factor(clean_data$outcome_category, levels = c("feed behaviour", "growth performance", "nutrient utilisation"))
+clean_data$outcome_category <- factor(clean_data$outcome_category, levels = c("feeding behaviour", "growth performance", "nutrient utilisation"))
 
 # R² and variance components for full-dataset MLMR (no-intercept model)
 r2_meta_reg <- r2_ml(res_meta_reg, res_3L_all)
@@ -762,7 +762,7 @@ res_meta_reg_sens <- rma.mv(yi = lnRR, V = VCV_sens,
 res_meta_reg_sens
 
 # Model B: with-intercept — contrasts between outcome categories (the reduced dataset)
-# Reference level = feed behaviour
+# Reference level = feeding behaviour
 res_meta_reg_sens_contrasts <- rma.mv(yi = lnRR, V = VCV_sens,
   mods   = ~ outcome_category,
   random = list(~ 1 | study_ID / ES_ID),
@@ -772,9 +772,9 @@ res_meta_reg_sens_contrasts <- rma.mv(yi = lnRR, V = VCV_sens,
 )
 res_meta_reg_sens_contrasts
 
-# Intercept                              = feed behaviour estimate
-# outcome_categorygrowth performance     = growth vs feed behaviour
-# outcome_categorynutrient utilisation   = nutrient utilisation vs feed behaviour
+# Intercept                              = feeding behaviour estimate
+# outcome_categorygrowth performance     = growth vs feeding behaviour
+# outcome_categorynutrient utilisation   = nutrient utilisation vs feeding behaviour
 
 # Re-level to get growth performance as reference (the reduced dataset)
 clean_data_sens$outcome_category <- relevel(factor(clean_data_sens$outcome_category),
@@ -790,12 +790,12 @@ res_meta_reg_sens_contrasts_gp <- rma.mv(yi = lnRR, V = VCV_sens,
 res_meta_reg_sens_contrasts_gp
 
 # Intercept                              = growth performance estimate
-# outcome_categoryfeed behaviour         = feed behaviour vs growth performance
+# outcome_categoryfeeding behaviour         = feeding behaviour vs growth performance
 # outcome_categorynutrient utilisation   = nutrient utilisation vs growth performance
 
 # Restore original factor ordering for downstream code
 clean_data_sens$outcome_category <- factor(clean_data_sens$outcome_category,
-                                           levels = c("feed behaviour",
+                                           levels = c("feeding behaviour",
                                                       "growth performance",
                                                       "nutrient utilisation"))
 
@@ -816,7 +816,7 @@ ggsave(here("Figures", "sens_mlmr_plot.png"), plot = sens_mlmr_plot, dpi = 300, 
 ## Subgroup MLMA for each outcome category 
 
 # Create subgroup datasets
-clean_data_sens_feed         <- clean_data_sens %>% filter(outcome_category == "feed behaviour")
+clean_data_sens_feeding         <- clean_data_sens %>% filter(outcome_category == "feeding behaviour")
 clean_data_sens_growth       <- clean_data_sens %>% filter(outcome_category == "growth performance")
 clean_data_sens_nutr         <- clean_data_sens %>% filter(outcome_category == "nutrient utilisation")
 
@@ -852,12 +852,12 @@ run_mlma <- function(data, outcome_cat, rho = 0.5,
 }
 
 # Run subgroup MLMA for all three outcome categories
-outcome_list <- c("feed behaviour", "growth performance", "nutrient utilisation")
+outcome_list <- c("feeding behaviour", "growth performance", "nutrient utilisation")
 results_mlma <- lapply(outcome_list, function(cat) run_mlma(clean_data_sens, cat))
 names(results_mlma) <- outcome_list
 
 # Print subgroup results
-results_mlma[["feed behaviour"]]$model
+results_mlma[["feeding behaviour"]]$model
 results_mlma[["growth performance"]]$model
 results_mlma[["nutrient utilisation"]]$model
 
@@ -1041,7 +1041,7 @@ cat("R2 setting MLMR:     ", r2_setting_all, "\n")
 
 ## Run remaining MLMR
 
-outcome_list_all <- c("overall", "feed behaviour", "growth performance", "nutrient utilisation")
+outcome_list_all <- c("overall", "feeding behaviour", "growth performance", "nutrient utilisation")
 
 # Duration models by subgroup
 results_mlmr_duration <- lapply(outcome_list_all, function(cat) {
@@ -1054,7 +1054,7 @@ results_mlmr_duration <- lapply(outcome_list_all, function(cat) {
 names(results_mlmr_duration) <- outcome_list_all
 
 results_mlmr_duration$overall$model
-results_mlmr_duration$`feed behaviour`$model
+results_mlmr_duration$`feeding behaviour`$model
 results_mlmr_duration$`growth performance`$model
 results_mlmr_duration$`nutrient utilisation`$model
 
@@ -1069,7 +1069,7 @@ results_mlmr_size <- lapply(outcome_list_all, function(cat) {
 names(results_mlmr_size) <- outcome_list_all
 
 results_mlmr_size$overall$model
-results_mlmr_size$`feed behaviour`$model
+results_mlmr_size$`feeding behaviour`$model
 results_mlmr_size$`growth performance`$model
 results_mlmr_size$`nutrient utilisation`$model
 
@@ -1168,7 +1168,7 @@ glance_rma <- function(model, model_name, dataset = NA_character_) {
   mlma_models <- list(
   list("Overall",                          "full", res_3L_all),
   list("Overall (S004 removed)",           "sens", res_3L_sens),
-  list("Feed behaviour",                   "sens", results_mlma[["feed behaviour"]]$model),
+  list("feeding behaviour",                   "sens", results_mlma[["feeding behaviour"]]$model),
   list("Growth performance",               "sens", results_mlma[["growth performance"]]$model),
   list("Nutrient utilisation",             "sens", results_mlma[["nutrient utilisation"]]$model),
   list("Nutrient utilisation (PD/ED removed)", "sens", res_nodeposition)
@@ -1189,10 +1189,10 @@ mlmr_models <- list(
   list("Species (fixed)",                       "full", res_species_fixed),
   list("Species (random)",                      "full", res_species_random),
   list("Outcome category",                      "full", res_meta_reg),
-  list("Outcome category (contrasts, ref = feed)",   "full", res_meta_reg_contrasts),
+  list("Outcome category (contrasts, ref = feeding)",   "full", res_meta_reg_contrasts),
   list("Outcome category (contrasts, ref = growth)", "full", res_meta_reg_contrasts_gp),
   list("Outcome category",                      "sens", res_meta_reg_sens),
-  list("Outcome category (contrasts, ref = feed)",   "sens", res_meta_reg_sens_contrasts),
+  list("Outcome category (contrasts, ref = feeding)",   "sens", res_meta_reg_sens_contrasts),
   list("Outcome category (contrasts, ref = growth)", "sens", res_meta_reg_sens_contrasts_gp),
   list("Dose + dose^2 + initial size (overall)",     "sens", size_MLMR$model),
   list("Dose + dose^2 + experimental system (overall)", "sens", setting_MLMR$model),
