@@ -84,7 +84,6 @@ clean_data %>%
   )
 
 ## Check distribution of effect sizes overall and for each outcome category
-
 lnRR_feeding    <- clean_data %>% filter(outcome_category == "feeding behaviour")
 lnRR_growth  <- clean_data %>% filter(outcome_category == "growth performance")
 lnRR_nutrient <- clean_data %>% filter(outcome_category == "nutrient utilisation")
@@ -301,7 +300,11 @@ run_orchard_plot <- function(model, I2,
     scale_y_continuous(limits = y_limits) +
     theme(
       panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      axis.title.x = element_text(size = 14),
+      axis.title.y = element_text(size = 14),
+      axis.text.x  = element_text(size = 12),
+      axis.text.y  = element_text(size = 12)
     )
   return(p)
 }
