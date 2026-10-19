@@ -1129,6 +1129,93 @@ ulva_inclusion <- bubble_plot(res_meta_dose_plot,
 ulva_inclusion
 ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion, width = 10, height = 6, units = "in")
 
+## Ulva inclusion level vs effect size bubble plot with one panel per outcome category
+
+outcome_cats <- c("feeding behaviour"    = "Feeding behaviour",
+                  "growth performance"   = "Growth performance",
+                  "nutrient utilisation" = "Nutrient utilisation")
+
+# Shared bubble-size scale 
+precision_limits <- range(1 / sqrt(clean_data_sens$vi_lnRR))
+
+# Function: fit the dose MLMR within each outcome category and draw its bubble plot
+plot_dose_by_category <- function(cat_name, panel_title) {
+
+  dat_cat <- clean_data_sens %>%
+    filter(outcome_category == cat_name) %>%
+    mutate(precision = 1 / sqrt(vi_lnRR))
+
+  # VCV for this subset
+  V_cat <- vcalc(vi = vi_lnRR, cluster = cohort_ID, obs = ES_ID,
+                 rho = 0.5, data = dat_cat)
+
+  # MLMR with unscaled Ulva inclusion level (same specification as the overall model)
+  res_cat <- rma.mv(yi = lnRR, V = V_cat,
+                    mods   = ~ intervention_dose_raw + I(intervention_dose_raw^2),
+                    random = list(~ 1 | study_ID / ES_ID),
+                    test   = "t",
+                    data   = dat_cat,
+                    method = "REML")
+
+  # Predicted curve, 95% CI and prediction interval across the observed dose range
+  dose_grid <- seq(min(dat_cat$intervention_dose_raw),
+                   max(dat_cat$intervention_dose_raw), length.out = 200)
+  pred <- predict(res_cat, newmods = cbind(dose_grid, dose_grid^2))
+  pred <- data.frame(dose = dose_grid, est = pred$pred,
+                     ci_lb = pred$ci.lb, ci_ub = pred$ci.ub,
+                     pi_lb = pred$pi.lb, pi_ub = pred$pi.ub)
+
+  p <- ggplot() +
+    geom_point(data = dat_cat,
+               aes(x = intervention_dose_raw, y = lnRR, size = precision),
+               shape = 21, fill = "grey90", colour = "grey20",
+               stroke = 0.4, alpha = 0.7) +
+    geom_line(data = pred, aes(x = dose, y = pi_lb), linetype = "dotted") +
+    geom_line(data = pred, aes(x = dose, y = pi_ub), linetype = "dotted") +
+    geom_line(data = pred, aes(x = dose, y = ci_lb), linetype = "dashed") +
+    geom_line(data = pred, aes(x = dose, y = ci_ub), linetype = "dashed") +
+    geom_line(data = pred, aes(x = dose, y = est), colour = "deeppink3", linewidth = 1.2) +
+    annotate("text", x = 30, y = Inf, hjust = 1, vjust = 1.5,
+             label = paste0("italic(k) == ", nrow(dat_cat)), parse = TRUE) +
+    scale_size_continuous(range = c(1, 6), limits = precision_limits,
+                          name = "Precision (1/SE)") +
+    scale_x_continuous(breaks = seq(0, 30, by = 5), limits = c(0, 30)) +
+    scale_y_continuous(breaks = seq(-0.5, 0.5, by = 0.5)) +
+    coord_cartesian(ylim = c(-0.7, 0.7)) +
+    labs(title = "",
+         x = expression(italic(Ulva) ~ "inclusion level (% w/w)"),
+         y = "Effect size (lnRR)") +
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line        = element_line(color = "black"),
+      plot.title       = element_text(face = "bold")
+    )
+
+  list(model = res_cat, plot = p)
+}
+
+# Run function to create bubble plot for each outcome category
+dose_by_category <- lapply(names(outcome_cats), function(cc)
+  plot_dose_by_category(cc, outcome_cats[[cc]]))
+names(dose_by_category) <- names(outcome_cats)
+
+# Summaries
+lapply(dose_by_category, function(x) x$model)
+
+# Create figure panel
+ulva_inclusion_by_category <-
+  dose_by_category[["feeding behaviour"]]$plot +
+  dose_by_category[["growth performance"]]$plot +
+  dose_by_category[["nutrient utilisation"]]$plot +
+  plot_layout(nrow = 1, guides = "collect", axis_titles = "collect") +
+  plot_annotation(tag_levels = list(c("A)", "B)", "C)")),
+                  theme = theme(plot.tag = element_text(face = "bold")))
+
+ulva_inclusion_by_category
+ggsave(here("Figures", "ulva_inclusion_by_category.png"), plot = ulva_inclusion_by_category, width = 16, height = 6, units = "in", dpi = 300)
+
 ### Save all model outputs as CSV files
 # Create output directory
 dir.create(here("Outputs"), showWarnings = FALSE)
