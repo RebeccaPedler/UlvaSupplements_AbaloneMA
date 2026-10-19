@@ -1132,8 +1132,8 @@ ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion
 ## Ulva inclusion level vs effect size bubble plot with one panel per outcome category
 
 outcome_cats <- c("feeding behaviour"    = "Feeding behaviour",
-                  "growth performance"   = "Growth performance",
-                  "nutrient utilisation" = "Nutrient utilisation")
+                  "nutrient utilisation" = "Nutrient utilisation",
+                  "growth performance"   = "Growth performance")
 
 # Shared bubble-size scale 
 precision_limits <- range(1 / sqrt(clean_data_sens$vi_lnRR))
@@ -1207,8 +1207,8 @@ lapply(dose_by_category, function(x) x$model)
 # Create figure panel
 ulva_inclusion_by_category <-
   dose_by_category[["feeding behaviour"]]$plot +
-  dose_by_category[["growth performance"]]$plot +
   dose_by_category[["nutrient utilisation"]]$plot +
+  dose_by_category[["growth performance"]]$plot +
   plot_layout(nrow = 1, guides = "collect", axis_titles = "collect") +
   plot_annotation(tag_levels = list(c("A)", "B)", "C)")),
                   theme = theme(plot.tag = element_text(face = "bold")))
