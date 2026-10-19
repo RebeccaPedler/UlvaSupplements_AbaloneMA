@@ -1170,6 +1170,8 @@ plot_dose_by_category <- function(cat_name, panel_title) {
                aes(x = intervention_dose_raw, y = lnRR, size = precision),
                shape = 21, fill = "grey90", colour = "grey20",
                stroke = 0.4, alpha = 0.7) +
+    geom_line(data = pred, aes(x = dose, y = pi_lb), linetype = "dotted") +
+    geom_line(data = pred, aes(x = dose, y = pi_ub), linetype = "dotted") +
     geom_line(data = pred, aes(x = dose, y = ci_lb), linetype = "dashed") +
     geom_line(data = pred, aes(x = dose, y = ci_ub), linetype = "dashed") +
     geom_line(data = pred, aes(x = dose, y = est), colour = "deeppink3", linewidth = 1.2) +
@@ -1178,9 +1180,8 @@ plot_dose_by_category <- function(cat_name, panel_title) {
     scale_size_continuous(range = c(1, 6), limits = precision_limits,
                           name = "Precision (1/SE)") +
     scale_x_continuous(breaks = seq(0, 30, by = 5), limits = c(0, 30)) +
-    scale_y_continuous(breaks = seq(floor(min(clean_data_sens$lnRR)),
-                                    ceiling(max(clean_data_sens$lnRR)), 0.5)) +
-    coord_cartesian(ylim = range(clean_data_sens$lnRR)) +
+    scale_y_continuous(breaks = seq(-0.5, 0.5, by = 0.5)) +
+    coord_cartesian(ylim = c(-0.7, 0.7)) +
     labs(title = "",
          x = expression(italic(Ulva) ~ "inclusion level (% w/w)"),
          y = "Effect size (lnRR)") +
