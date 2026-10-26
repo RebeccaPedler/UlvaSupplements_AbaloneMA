@@ -149,6 +149,10 @@ mydata %>%
     .groups = "drop"
   )
 
+# Fix water temperature for S002.8 (control mean of 4.76 matches 22 C, not the 26 C challenge)
+mydata <- mydata %>%
+  mutate(water_temperature = ifelse(ES_ID == "S002.8", "22", water_temperature))
+
 ## Count number of ES_ID (observations) per species
 mydata %>%
   group_by(species) %>%
