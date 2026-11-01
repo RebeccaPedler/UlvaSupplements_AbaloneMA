@@ -1139,7 +1139,7 @@ outcome_cats <- c("feeding behaviour"    = "Feeding behaviour",
 precision_limits <- range(1 / sqrt(clean_data_sens$vi_lnRR))
 
 # Function: fit the dose MLMR within each outcome category and draw its bubble plot
-plot_dose_by_category <- function(cat_name, panel_title) {
+plot_dose_by_category <- function(cat_name, panel_title, x_max = 30) {
 
   dat_cat <- clean_data_sens %>%
     filter(outcome_category == cat_name) %>%
@@ -1175,13 +1175,13 @@ plot_dose_by_category <- function(cat_name, panel_title) {
     geom_line(data = pred, aes(x = dose, y = ci_lb), linetype = "dashed") +
     geom_line(data = pred, aes(x = dose, y = ci_ub), linetype = "dashed") +
     geom_line(data = pred, aes(x = dose, y = est), colour = "deeppink3", linewidth = 1.2) +
-    annotate("text", x = 30, y = Inf, hjust = 1, vjust = 1.5,
+    annotate("text", x = x_max, y = Inf, hjust = 1, vjust = 1.5,
              label = paste0("italic(k) == ", nrow(dat_cat)), parse = TRUE) +
     scale_size_continuous(range = c(1, 6), limits = precision_limits,
                           name = "Precision (1/SE)") +
-    scale_x_continuous(breaks = seq(0, 30, by = 5), limits = c(0, 30)) +
+    scale_x_continuous(breaks = seq(0, x_max, by = 5)) +
     scale_y_continuous(breaks = seq(-0.5, 0.5, by = 0.5)) +
-    coord_cartesian(ylim = c(-0.7, 0.7)) +
+    coord_cartesian(xlim = c(0, x_max), ylim = c(-0.7, 0.7)) +
     labs(title = "",
          x = expression(italic(Ulva) ~ "inclusion level (% w/w)"),
          y = "Effect size (lnRR)") +
@@ -1198,11 +1198,12 @@ plot_dose_by_category <- function(cat_name, panel_title) {
 
 # Run function to create bubble plot for each outcome category
 dose_by_category <- lapply(names(outcome_cats), function(cc)
-  plot_dose_by_category(cc, outcome_cats[[cc]]))
-names(dose_by_category) <- names(outcome_cats)
+  plot_dose_by_category(cc, outcome_cats[[cc]],
+  x_max = if (cc == "nutrient utilisation") 20 else 30))
+  names(dose_by_category) <- names(outcome_cats)
 
 # Summaries
-lapply(dose_by_category, function(x) x$model)
+  lapply(dose_by_category, function(x) x$model)
 
 # Create figure panel
 ulva_inclusion_by_category <-
