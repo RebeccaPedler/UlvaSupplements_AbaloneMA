@@ -50,13 +50,12 @@ update_geom_defaults("label", list(family = font_ms))
 # Save every ggplot with ragg so the saved file uses the system font
 ggsave <- function(..., device = ragg::agg_png) ggplot2::ggsave(..., device = device)
 
-# Text sizes for k labels, precision key and axis text.
+# Text sizes for k labels, precision key and axis text
 k_size_all     <- 6
 key_size_all   <- 6
 axis_text_size <- 12
 
-# Shared theme additions used by every plot: font, no grid lines, axis title/text sizes.
-# Supply key_size to also set the legend text/title size.
+# Shared theme used by every plot
 theme_ms <- function(title_size = 14, axis_size = axis_text_size,
                      key_size = NULL, font = font_ms) {
   th <- theme(
@@ -77,8 +76,7 @@ theme_ms <- function(title_size = 14, axis_size = axis_text_size,
   th
 }
 
-# Shared text-layer styling for orchaRd plots: set size and font of the k labels
-# (and optionally nudge them vertically with shift)
+# Shared text-layer styling for orchaRd plots
 style_text_layers <- function(p, size, shift = 0, font = font_ms) {
   for (i in seq_along(p$layers)) {
     if (inherits(p$layers[[i]]$geom, c("GeomText", "GeomLabel"))) {
