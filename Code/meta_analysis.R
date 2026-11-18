@@ -32,18 +32,44 @@ if (!("orchaRd" %in% installed_packages)) {
 }
 library(orchaRd)
 
-## Font setup: Times New Roman for every figure
+## FIGURE SET UP
+
+# Times New Roman for every figure in this script
+# Complete themes default to Times New Roman
 theme_minimal <- function(base_size = 11, base_family = "Times New Roman", ...) {
   ggplot2::theme_minimal(base_size = base_size, base_family = base_family, ...)
 }
 
-# Default theme and text drawn by geoms / annotate()
+# Default theme (covers patchwork tags) and text drawn by geoms / annotate()
 theme_update(text = element_text(family = "Times New Roman"))
 update_geom_defaults("text",  list(family = "Times New Roman"))
 update_geom_defaults("label", list(family = "Times New Roman"))
 
-# Save every ggplot with ragg 
+# Save every ggplot with ragg so the saved file uses the system font
 ggsave <- function(..., device = ragg::agg_png) ggplot2::ggsave(..., device = device)
+
+# Text sizes for k labels, precision key and axis text.
+
+k_size_all     <- 4
+key_size_all   <- 4
+axis_text_size <- 12
+
+# Apply to orchaRd bubble_plot() outputs: k label, precision key, axis text
+style_bubble <- function(p, k_size = k_size_all, key_size = key_size_all,
+                         axis_size = axis_text_size, font = "Times New Roman") {
+  for (i in seq_along(p$layers)) {
+    if (inherits(p$layers[[i]]$geom, c("GeomText", "GeomLabel"))) {
+      p$layers[[i]]$aes_params$size   <- k_size
+      p$layers[[i]]$aes_params$family <- font
+    }
+  }
+  p + theme(
+    legend.text  = element_text(size = key_size * ggplot2::.pt, family = font),
+    legend.title = element_text(size = key_size * ggplot2::.pt, family = font),
+    axis.text.x  = element_text(size = axis_size),
+    axis.text.y  = element_text(size = axis_size)
+  )
+}
 
 ### Please download GitHub repository and then run the following
 here()
@@ -166,7 +192,8 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
       axis.line         = element_line(colour = "black"),
       axis.ticks        = element_line(colour = "black", linewidth = 0.8),
       axis.ticks.length = unit(0.25, "cm"),
-      axis.text         = element_text(colour = "black", size = 10),
+      axis.text         = element_text(colour = "black", size = 12),
+      axis.title        = element_text(size = 14),
       panel.border      = element_blank(),
       plot.title        = element_text(face = "bold")
     )
@@ -195,7 +222,7 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
       aes(x = x_label_pos, y = outcome_long, label = label),
       hjust       = 1.05,
       vjust       = -0.6,
-      size        = 4,
+      size        = 6,
       colour      = "grey30",
       family      = "Times New Roman",
       inherit.aes = FALSE
@@ -285,7 +312,8 @@ run_orchard_plot <- function(model, I2,
                              y_limits = c(-1.5, 1.5),
                              colour = NULL,
                              font = "Times New Roman",
-                             k_size  = 5,      
+                             k_size  = 5, 
+                             k_shift = 0.25,     
                              I2_size = 5)  {
   if (is.null(colour)) {
     if (identical(mod, "1")) {
@@ -313,6 +341,7 @@ run_orchard_plot <- function(model, I2,
     if (inherits(p$layers[[i]]$geom, c("GeomText", "GeomLabel"))) {
       p$layers[[i]]$aes_params$family <- font
       p$layers[[i]]$aes_params$size   <- k_size
+      p$layers[[i]]$data$y            <- p$layers[[i]]$data$y + k_shift
     }
   }
 
@@ -485,6 +514,7 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 14),
       text = element_text(family = "Times New Roman")
     )
   
@@ -496,6 +526,7 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 14),
       text = element_text(family = "Times New Roman")
     )
   
@@ -508,6 +539,7 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 14),
       text = element_text(family = "Times New Roman")
     ) 
 
@@ -519,8 +551,16 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 14),
       text = element_text(family = "Times New Roman")
     )
+  }
+  
+  p_egger <- style_bubble(p_egger)
+  p_year  <- style_bubble(p_year)
+  if (!is.null(multi_mod)) {
+    p_multi_egger <- style_bubble(p_multi_egger)
+    p_multi_year  <- style_bubble(p_multi_year)
   }
   
   list(
@@ -575,7 +615,7 @@ ggsave(here("Figures", "combined_plot.png"), plot = combined_plot, dpi = 300, wi
 
 # Funnel plot — full dataset
 ragg::agg_png(here("Figures", "funnel_plot_all.png"), width = 8, height = 6, units = "in", res = 600)
-par(family = "Times New Roman")
+par(family = "Times New Roman", cex.lab = 14 / 12)
 funnel(res_3L_all,
        yaxis    = "seinv",
        xlab     = "Standardised residuals (lnRR)",
@@ -731,7 +771,7 @@ ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi
 
 # Funnel plot — the reduced dataset
 ragg::agg_png(here("Figures", "funnel_plot_sens.png"), width = 8, height = 6, units = "in", res = 600)
-par(family = "Times New Roman")
+par(family = "Times New Roman", cex.lab = 14 / 12)
 funnel(res_3L_sens,
        yaxis    = "seinv",
        xlab     = "Standardised residuals (lnRR)",
@@ -1167,8 +1207,10 @@ ulva_inclusion <- bubble_plot(res_meta_dose_plot,
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line        = element_line(color = "black")
+    axis.line        = element_line(color = "black"),
+    axis.title       = element_text(size = 14)
   )
+ulva_inclusion <- style_bubble(ulva_inclusion)
 
 ulva_inclusion
 ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion, width = 10, height = 6, units = "in")
@@ -1220,7 +1262,8 @@ plot_dose_by_category <- function(cat_name, panel_title, x_max = 30) {
     geom_line(data = pred, aes(x = dose, y = ci_ub), linetype = "dashed") +
     geom_line(data = pred, aes(x = dose, y = est), colour = "deeppink3", linewidth = 1.2) +
     annotate("text", x = x_max, y = Inf, hjust = 1, vjust = 1.5,
-             label = paste0("italic(k) == ", nrow(dat_cat)), parse = TRUE) +
+             label = paste0("italic(k) == ", nrow(dat_cat)), parse = TRUE,
+             size = k_size_all) +
     scale_size_continuous(range = c(1, 6), limits = precision_limits,
                           name = "Precision (1/SE)") +
     scale_x_continuous(breaks = seq(0, x_max, by = 5)) +
@@ -1234,6 +1277,10 @@ plot_dose_by_category <- function(cat_name, panel_title, x_max = 30) {
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       axis.line        = element_line(color = "black"),
+      axis.title       = element_text(size = 14),
+      axis.text        = element_text(size = axis_text_size),
+      legend.text      = element_text(size = key_size_all * ggplot2::.pt),
+      legend.title     = element_text(size = key_size_all * ggplot2::.pt),
       plot.title       = element_text(face = "bold")
     )
 
