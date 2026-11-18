@@ -32,12 +32,12 @@ if (!("orchaRd" %in% installed_packages)) {
 }
 library(orchaRd)
 
-## Font setup
+## Set font so that all plots are in TNR
 theme_minimal <- function(base_size = 11, base_family = "Times New Roman", ...) {
   ggplot2::theme_minimal(base_size = base_size, base_family = base_family, ...)
 }
 
-# Default theme (covers patchwork tags) and text drawn by geoms / annotate()
+# Default theme 
 theme_update(text = element_text(family = "Times New Roman"))
 update_geom_defaults("text",  list(family = "Times New Roman"))
 update_geom_defaults("label", list(family = "Times New Roman"))
@@ -1296,6 +1296,19 @@ dose_by_category <- lapply(names(outcome_cats), function(cc)
 # Summaries
   lapply(dose_by_category, function(x) x$model)
 
+# Plot each outcome individually
+mlmr_feeding_behaviour    <- dose_by_category[["feeding behaviour"]]$plot
+mlmr_feeding_behaviour
+mlmr_nutrient_utilisation <- dose_by_category[["nutrient utilisation"]]$plot
+mlmr_nutrient_utilisation
+mlmr_growth_performance   <- dose_by_category[["growth performance"]]$plot         
+mlmr_growth_performance
+
+ggsave(here("Figures", "mlmr_feeding_behaviour.png"), plot = mlmr_feeding_behaviour, width = 10, height = 9, units = "in", dpi = 300)
+ggsave(here("Figures", "mlmr_nutrient_utilisation.png"), plot = mlmr_nutrient_utilisation, width = 10, height = 9, units = "in", dpi = 300)
+ggsave(here("Figures", "mlmr_growth_performance.png"), plot = mlmr_growth_performance, width = 10, height = 9, units = "in", dpi = 300)
+
+         
 # Create figure panel
 ulva_inclusion_by_category <-
   dose_by_category[["feeding behaviour"]]$plot +
@@ -1303,7 +1316,7 @@ ulva_inclusion_by_category <-
   dose_by_category[["growth performance"]]$plot +
   plot_layout(nrow = 1, guides = "collect", axis_titles = "collect") +
   plot_annotation(tag_levels = list(c("A)", "B)", "C)")),
-                  theme = theme(plot.tag = element_text(face = "bold", family = "Times New Roman")))
+                  theme = theme(plot.tag = element_text(face = "bold", family = "Times New Roman", size = 16)))
 
 ulva_inclusion_by_category
 ggsave(here("Figures", "ulva_inclusion_by_category.png"), plot = ulva_inclusion_by_category, width = 16, height = 6, units = "in", dpi = 300)
