@@ -5,7 +5,7 @@
 ## Working with the raw data for meta-analysis - main data set.
 
 ## Install packages and repos
-install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", "ragg", "systemfonts"))
 
 devtools::install_github("davidsjoberg/ggsankey")
 
@@ -21,6 +21,11 @@ library(grid)
 library(patchwork)
 library(here)
 library(ggsankey)
+library(ragg)
+library(systemfonts)
+
+# Load fonts for plotting
+windowsFonts(`Times New Roman` = windowsFont("Times New Roman"))
 
 ## Load data
 mydata <- read_csv(here("Data", "ulva_meta_analysis_raw_data.csv"))
