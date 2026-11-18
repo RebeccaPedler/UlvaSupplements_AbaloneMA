@@ -32,21 +32,20 @@ if (!("orchaRd" %in% installed_packages)) {
 }
 library(orchaRd)
 
-## Font setup: Times New Roman for every figure in this script
-# Complete themes default to Times New Roman
+## Font setup
 theme_minimal <- function(base_size = 11, base_family = "Times New Roman", ...) {
   ggplot2::theme_minimal(base_size = base_size, base_family = base_family, ...)
 }
+
 # Default theme (covers patchwork tags) and text drawn by geoms / annotate()
 theme_update(text = element_text(family = "Times New Roman"))
 update_geom_defaults("text",  list(family = "Times New Roman"))
 update_geom_defaults("label", list(family = "Times New Roman"))
+
 # Save every ggplot with ragg so the saved file uses the system font
 ggsave <- function(..., device = ragg::agg_png) ggplot2::ggsave(..., device = device)
 
 # Text sizes for k labels, precision key and axis text.
-# k_size / key_size are geom-style sizes (same scale as k_size in run_orchard_plot);
-# axis_text_size is in pt.
 k_size_all     <- 6
 key_size_all   <- 6
 axis_text_size <- 12
@@ -309,10 +308,11 @@ run_orchard_plot <- function(model, I2,
                              y_limits = c(-1.5, 1.5),
                              colour = NULL,
                              font = "Times New Roman",
-                             k_size  = 6,      
-                             k_shift = 0.1,    # shifts k to the right (effect size units)
-                             label_size = 16,  # Intercept / outcome category labels (pt)
-                             I2_size = 6)  {
+                             k_size  = 5,      
+                             key_size = 4.5,   
+                             k_shift = 0.25,    
+                             label_size = 16,  
+                             I2_size = 5)  {
   if (is.null(colour)) {
     if (identical(mod, "1")) {
       n_groups <- 1
@@ -366,7 +366,9 @@ run_orchard_plot <- function(model, I2,
       axis.title.x = element_text(size = 14),
       axis.title.y = element_text(size = 14),
       axis.text.x  = element_text(size = 12),
-      axis.text.y  = element_text(size = label_size)
+      axis.text.y  = element_text(size = label_size),
+      legend.text  = element_text(size = key_size * ggplot2::.pt),
+      legend.title = element_text(size = key_size * ggplot2::.pt)
     )
 
   return(p)
@@ -524,7 +526,7 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      axis.title = element_text(size = 14),
+      axis.title = element_text(size = 16),
       text = element_text(family = "Times New Roman")
     )
   
@@ -537,7 +539,7 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      axis.title = element_text(size = 14),
+      axis.title = element_text(size = 16),
       text = element_text(family = "Times New Roman")
     ) 
 
@@ -549,7 +551,7 @@ run_bias_models <- function(data,
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      axis.title = element_text(size = 14),
+      axis.title = element_text(size = 16),
       text = element_text(family = "Times New Roman")
     )
   }
@@ -765,7 +767,7 @@ combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year
   )
 
 combined_plot_sens
-ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi = 300, width = 10, height = 12, units = "in")
+ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
 
 # Funnel plot — the reduced dataset
 ragg::agg_png(here("Figures", "funnel_plot_sens.png"), width = 8, height = 6, units = "in", res = 600)
