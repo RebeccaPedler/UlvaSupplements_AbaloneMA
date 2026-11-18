@@ -13,7 +13,8 @@ packages_cran <- c(
   "patchwork",     
   "car",
   "devtools",
-  "ggtext"
+  "ggtext",
+  "ragg"
 )
 
 # Install and load any missing CRAN packages
@@ -30,6 +31,41 @@ if (!("orchaRd" %in% installed_packages)) {
   devtools::install_github("daniel1noble/orchaRd", ref = "main", force = TRUE)
 }
 library(orchaRd)
+
+## Font setup
+theme_minimal <- function(base_size = 11, base_family = "Times New Roman", ...) {
+  ggplot2::theme_minimal(base_size = base_size, base_family = base_family, ...)
+}
+
+# Default theme (covers patchwork tags) and text drawn by geoms / annotate()
+theme_update(text = element_text(family = "Times New Roman"))
+update_geom_defaults("text",  list(family = "Times New Roman"))
+update_geom_defaults("label", list(family = "Times New Roman"))
+
+# Save every ggplot with ragg so the saved file uses the system font
+ggsave <- function(..., device = ragg::agg_png) ggplot2::ggsave(..., device = device)
+
+# Text sizes for k labels, precision key and axis text.
+k_size_all     <- 6
+key_size_all   <- 6
+axis_text_size <- 12
+
+# Apply to orchaRd bubble_plot() outputs: k label, precision key, axis text
+style_bubble <- function(p, k_size = k_size_all, key_size = key_size_all,
+                         axis_size = axis_text_size, font = "Times New Roman") {
+  for (i in seq_along(p$layers)) {
+    if (inherits(p$layers[[i]]$geom, c("GeomText", "GeomLabel"))) {
+      p$layers[[i]]$aes_params$size   <- k_size
+      p$layers[[i]]$aes_params$family <- font
+    }
+  }
+  p + theme(
+    legend.text  = element_text(size = key_size * ggplot2::.pt, family = font),
+    legend.title = element_text(size = key_size * ggplot2::.pt, family = font),
+    axis.text.x  = element_text(size = axis_size),
+    axis.text.y  = element_text(size = axis_size)
+  )
+}
 
 ### Please download GitHub repository and then run the following
 here()
@@ -89,6 +125,7 @@ lnRR_growth  <- clean_data %>% filter(outcome_category == "growth performance")
 lnRR_nutrient <- clean_data %>% filter(outcome_category == "nutrient utilisation")
 
 # Create histograms
+par(family = "Times New Roman")
 hist(clean_data$lnRR,    breaks = 30, main = "all data")  
 hist(lnRR_feeding$lnRR,    breaks = 30, main = "feeding behaviour")  
 hist(lnRR_growth$lnRR,  breaks = 30, main = "Growth performance")  
@@ -110,6 +147,7 @@ vi_lnRR_growth  <- clean_data %>% filter(outcome_category == "growth performance
 vi_lnRR_nutrient <- clean_data %>% filter(outcome_category == "nutrient utilisation")
 
 # Create histograms
+par(family = "Times New Roman")
 hist(clean_data$vi_lnRR,     breaks = 30, main = "all data")  
 hist(vi_lnRR_feeding$vi_lnRR,   breaks = 30, main = "feeding behaviour")  
 hist(vi_lnRR_growth$vi_lnRR, breaks = 30, main = "Growth performance")  
@@ -150,7 +188,8 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
       axis.line         = element_line(colour = "black"),
       axis.ticks        = element_line(colour = "black", linewidth = 0.8),
       axis.ticks.length = unit(0.25, "cm"),
-      axis.text         = element_text(colour = "black", size = 10),
+      axis.text         = element_text(colour = "black", size = 12),
+      axis.title        = element_text(size = 14),
       panel.border      = element_blank(),
       plot.title        = element_text(face = "bold")
     )
@@ -161,7 +200,10 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
     labs(title = "A)", x = "Effect size (lnRR)", y = "Frequency", fill = "Outcome") +
     base_theme +
-    theme(legend.position = "right")
+    theme(
+    legend.position = "right",
+    text = element_text(family = "Times New Roman")
+    )
   
   # Forest-like plot
   p_outcomes <- ggplot(dat, aes(x = lnRR,
@@ -176,15 +218,17 @@ plot_outcome_distribution <- function(data, outcome_cat, x_label_pos = 1.2) {
       aes(x = x_label_pos, y = outcome_long, label = label),
       hjust       = 1.05,
       vjust       = -0.6,
-      size        = 4,
+      size        = 6,
       colour      = "grey30",
+      family      = "Times New Roman",
       inherit.aes = FALSE
     ) +
     labs(title = "B)", x = "Effect size (lnRR)", y = "Outcome") +
     base_theme +
     theme(
       legend.position = "none",
-      plot.margin     = margin(5, 80, 5, 5)
+      plot.margin     = margin(5, 80, 5, 5),
+      text = element_text(family = "Times New Roman")
     )
   
   # Combine
@@ -254,7 +298,7 @@ str(res_3L_all$V)
 I2_all <- calc_I2_3level(res_3L_all)
 print(I2_all)
 
-# Function: generate orchard plots
+# Function: generate orchard plots 
 run_orchard_plot <- function(model, I2, 
                              mod = "1",
                              title = "Orchard Plot",
@@ -262,7 +306,13 @@ run_orchard_plot <- function(model, I2,
                              x_pos = 0.7,
                              y_pos = 0.5,
                              y_limits = c(-1.5, 1.5),
-                             colour = NULL) {
+                             colour = NULL,
+                             font = "Times New Roman",
+                             k_size  = 5,      
+                             key_size = 4.5,   
+                             k_shift = 0.25,    
+                             label_size = 16,  
+                             I2_size = 5)  {
   if (is.null(colour)) {
     if (identical(mod, "1")) {
       n_groups <- 1
@@ -283,7 +333,17 @@ run_orchard_plot <- function(model, I2,
     mod = mod,
     xlab = xlab,
     group = "study_ID"
-  ) +
+  )
+
+  for (i in seq_along(p$layers)) {
+    if (inherits(p$layers[[i]]$geom, c("GeomText", "GeomLabel"))) {
+      p$layers[[i]]$aes_params$family <- font
+      p$layers[[i]]$aes_params$size   <- k_size
+      p$layers[[i]]$data$y            <- p$layers[[i]]$data$y + k_shift
+    }
+  }
+
+  p <- p +
     annotate(
       geom  = "text",
       x     = x_pos,
@@ -291,21 +351,26 @@ run_orchard_plot <- function(model, I2,
       label = paste0("italic(I)^2 == ", round(I2$I2_total, 2), "*\"%\""),
       color    = "black",
       parse    = TRUE,
-      size     = 4,
-      fontface = "bold"
+      size     = I2_size,
+      fontface = "bold",
+      family   = font
     ) +
     ggtitle(title) +
     scale_fill_manual(values = colour) +
     scale_colour_manual(values = colour) +
     scale_y_continuous(limits = y_limits) +
     theme(
+      text             = element_text(family = font),
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       axis.title.x = element_text(size = 14),
       axis.title.y = element_text(size = 14),
       axis.text.x  = element_text(size = 12),
-      axis.text.y  = element_text(size = 12)
+      axis.text.y  = element_text(size = label_size),
+      legend.text  = element_text(size = key_size * ggplot2::.pt),
+      legend.title = element_text(size = key_size * ggplot2::.pt)
     )
+
   return(p)
 }
 
@@ -448,7 +513,9 @@ run_bias_models <- function(data,
                          ylab  = "Effect size (lnRR)") +
     theme(
       panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 14),
+      text = element_text(family = "Times New Roman")
     )
   
   p_year <- bubble_plot(year_mod,
@@ -458,7 +525,9 @@ run_bias_models <- function(data,
                         ylab  = "Effect size (lnRR)") +
     theme(
       panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 16),
+      text = element_text(family = "Times New Roman")
     )
   
   if (!is.null(multi_mod)) {
@@ -469,7 +538,9 @@ run_bias_models <- function(data,
                                  ylab  = "Effect size (lnRR)") +
     theme(
       panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 16),
+      text = element_text(family = "Times New Roman")
     ) 
 
     p_multi_year <- bubble_plot(multi_mod,
@@ -479,8 +550,17 @@ run_bias_models <- function(data,
                                 ylab  = "Effect size (lnRR)") +
     theme(
       panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 16),
+      text = element_text(family = "Times New Roman")
     )
+  }
+  
+  p_egger <- style_bubble(p_egger)
+  p_year  <- style_bubble(p_year)
+  if (!is.null(multi_mod)) {
+    p_multi_egger <- style_bubble(p_multi_egger)
+    p_multi_year  <- style_bubble(p_multi_year)
   }
   
   list(
@@ -527,14 +607,15 @@ ggsave(here("Figures", "plot_multi_year.png"), plot = results_all_data$plot_mult
 combined_plot <- results_all_data$plot_egger + results_all_data$plot_year +
   plot_annotation(
     tag_levels = list(c("A)", "B)")),
-    theme = theme(plot.tag = element_text(face = "bold"))
+    theme = theme(plot.tag = element_text(face = "bold", family = "Times New Roman"))
   )
 
 combined_plot
 ggsave(here("Figures", "combined_plot.png"), plot = combined_plot, dpi = 300, width = 16, height = 8, units = "in")
 
 # Funnel plot — full dataset
-png(here("Figures", "funnel_plot_all.png"), width = 8, height = 6, units = "in", res = 600)
+ragg::agg_png(here("Figures", "funnel_plot_all.png"), width = 8, height = 6, units = "in", res = 600)
+par(family = "Times New Roman", cex.lab = 14 / 12)
 funnel(res_3L_all,
        yaxis    = "seinv",
        xlab     = "Standardised residuals (lnRR)",
@@ -682,14 +763,15 @@ ggsave(here("Figures", "plot_multi_year_sens.png"), plot = results_sens_data$plo
 combined_plot_sens <- results_sens_data$plot_egger / results_sens_data$plot_year +
   plot_annotation(
     tag_levels = list(c("A)", "B)")),
-    theme = theme(plot.tag = element_text(face = "bold"))
+    theme = theme(plot.tag = element_text(face = "bold", family = "Times New Roman"))
   )
 
 combined_plot_sens
 ggsave(here("Figures", "combined_plot_sens.png"), plot = combined_plot_sens, dpi = 300, width = 12, height = 14, units = "in")
 
 # Funnel plot — the reduced dataset
-png(here("Figures", "funnel_plot_sens.png"), width = 8, height = 6, units = "in", res = 600)
+ragg::agg_png(here("Figures", "funnel_plot_sens.png"), width = 8, height = 6, units = "in", res = 600)
+par(family = "Times New Roman", cex.lab = 14 / 12)
 funnel(res_3L_sens,
        yaxis    = "seinv",
        xlab     = "Standardised residuals (lnRR)",
@@ -945,7 +1027,8 @@ p_cont <- ggcorrplot(corr_cont, hc.order = TRUE, lab = TRUE,
     "Study duration (days)" = "Study duration (days)",
     "Initial abalone size (g)" = "Initial abalone size (g)"
   )) +
-  theme(plot.title = element_text(face = "bold"))
+  theme(plot.title = element_text(face = "bold"),
+        text = element_text(family = "Times New Roman"))
 
 # Log-transformed correlation matrix
 corr_cont_log <- round(
@@ -969,7 +1052,8 @@ p_cont_log <- ggcorrplot(corr_cont_log, hc.order = TRUE, lab = TRUE,
     "Study duration (days)" = "Study duration (days)",
     "Initial body size (g)" = "Initial abalone size (g)"
   )) +
-  theme(plot.title = element_text(face = "bold"))
+  theme(plot.title = element_text(face = "bold"),
+        text = element_text(family = "Times New Roman"))
 
 # Combine correlation plot, print and save
 combined_corr <- p_cont + p_cont_log + plot_layout(guides = "collect")
@@ -1123,8 +1207,10 @@ ulva_inclusion <- bubble_plot(res_meta_dose_plot,
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.line        = element_line(color = "black")
+    axis.line        = element_line(color = "black"),
+    axis.title       = element_text(size = 14)
   )
+ulva_inclusion <- style_bubble(ulva_inclusion)
 
 ulva_inclusion
 ggsave(here("Figures", "ulva_inclusion_relationship.png"), plot = ulva_inclusion, width = 10, height = 6, units = "in")
@@ -1176,7 +1262,8 @@ plot_dose_by_category <- function(cat_name, panel_title, x_max = 30) {
     geom_line(data = pred, aes(x = dose, y = ci_ub), linetype = "dashed") +
     geom_line(data = pred, aes(x = dose, y = est), colour = "deeppink3", linewidth = 1.2) +
     annotate("text", x = x_max, y = Inf, hjust = 1, vjust = 1.5,
-             label = paste0("italic(k) == ", nrow(dat_cat)), parse = TRUE) +
+             label = paste0("italic(k) == ", nrow(dat_cat)), parse = TRUE,
+             size = k_size_all) +
     scale_size_continuous(range = c(1, 6), limits = precision_limits,
                           name = "Precision (1/SE)") +
     scale_x_continuous(breaks = seq(0, x_max, by = 5)) +
@@ -1190,6 +1277,10 @@ plot_dose_by_category <- function(cat_name, panel_title, x_max = 30) {
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       axis.line        = element_line(color = "black"),
+      axis.title       = element_text(size = 14),
+      axis.text        = element_text(size = axis_text_size),
+      legend.text      = element_text(size = key_size_all * ggplot2::.pt),
+      legend.title     = element_text(size = key_size_all * ggplot2::.pt),
       plot.title       = element_text(face = "bold")
     )
 
@@ -1212,7 +1303,7 @@ ulva_inclusion_by_category <-
   dose_by_category[["growth performance"]]$plot +
   plot_layout(nrow = 1, guides = "collect", axis_titles = "collect") +
   plot_annotation(tag_levels = list(c("A)", "B)", "C)")),
-                  theme = theme(plot.tag = element_text(face = "bold")))
+                  theme = theme(plot.tag = element_text(face = "bold", family = "Times New Roman")))
 
 ulva_inclusion_by_category
 ggsave(here("Figures", "ulva_inclusion_by_category.png"), plot = ulva_inclusion_by_category, width = 16, height = 6, units = "in", dpi = 300)

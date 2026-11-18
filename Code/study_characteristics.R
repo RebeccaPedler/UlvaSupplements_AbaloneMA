@@ -5,7 +5,7 @@
 ## Working with the raw data for meta-analysis - main data set.
 
 ## Install packages and repos
-install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here"))
+install.packages(c("tidyr", "tidyverse", "rnaturalearth", "rnaturalearthdata", "sf", "ggplot2", "grid", "dplyr", "patchwork", "here", "ragg", "systemfonts"))
 
 devtools::install_github("davidsjoberg/ggsankey")
 
@@ -21,6 +21,16 @@ library(grid)
 library(patchwork)
 library(here)
 library(ggsankey)
+library(ragg)
+library(systemfonts)
+
+# Load fonts for plotting
+windowsFonts(`Times New Roman` = windowsFont("Times New Roman"))
+
+## Load data
+mydata <- read_csv(here("Data", "ulva_meta_analysis_raw_data.csv"))
+dim(mydata)
+names(mydata)
 
 ## Load data
 mydata <- read_csv(here("Data", "ulva_meta_analysis_raw_data.csv"))
@@ -188,7 +198,7 @@ bubble_data <- mydata %>%
   )
 
 # Replace _ in species names
-bubble_data$species <- gsub("_x_", " × ", bubble_data$species)
+bubble_data$species <- gsub("_x_", " x ", bubble_data$species)
 
 # Check unique species names
 unique(bubble_data$species)
@@ -211,11 +221,36 @@ bubble_data <- bubble_data %>%
 # Check species names 
 unique(bubble_data$species)
 
-# Replace " x " and " and " with line breaks for multi-line labels
+# Replace _ in species names
+bubble_data$species <- gsub("_x_", " x ", bubble_data$species)
+
+# Check unique species names
+unique(bubble_data$species)
+
+# Explicitly order species factor levels
+species_order <- c(
+  "H. laevigata",
+  "H. laevigata × H. rubra",
+  "H. discus hannai",
+  "H. midae",  
+  "H. laevigata and H. laevigata × H. rubra",
+  "H. asinina"
+)
+
 bubble_data <- bubble_data %>%
   mutate(
-    species_label = gsub(" x ", "\n x \n", species),
-    species_label = gsub(" and ", "\n and \n", species_label)
+    species = factor(species, levels = species_order)
+  )
+
+# Check species names 
+unique(bubble_data$species)
+
+# Replace " × " and " and " with line breaks for multi-line labels
+bubble_data <- bubble_data %>%
+  mutate(
+    species_label = gsub(" \u00d7 ", "\n\u00d7\n", species, fixed = TRUE),
+    species_label = gsub(" and ", "\n and \n", species_label, fixed = TRUE),
+    species_label = gsub("H. discus hannai", "H. discus\nhannai", species_label, fixed = TRUE)
   )
 
 # Build bubble plot
@@ -249,12 +284,11 @@ bubble_plot_species <- ggplot(
     x = "Species",
     y = "Outcome",
     size = "Number of Observations",
-    fill = "Outcome Category",
-    title = "A"
+    fill = "Outcome Category"
   ) +
   guides(
-    size = guide_legend(override.aes = list(size = 8)),
-    fill = guide_legend(override.aes = list(size = 8))
+    size = guide_legend(override.aes = list(size = 14)),
+    fill = guide_legend(override.aes = list(size = 14))
   ) +
   theme_minimal(base_size = 14) +
   theme(
@@ -264,24 +298,31 @@ bubble_plot_species <- ggplot(
       vjust = 1,       
       face = "italic",
       margin = margin(t = 10),   
-      size = 12  
+      size = 14  
     ),
-    axis.text.y = element_text(size = 12),
-    plot.title = element_text(face = "bold", vjust = 0.5),
-    panel.grid.major = element_line(color = "grey85"),
+    axis.text.y = element_text(size = 14),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.ticks.length = unit(0.25, "cm"),
     axis.ticks = element_line(color = "black"),
     axis.line = element_line(color = "black"),
     panel.border = element_blank(),
-    legend.position = "right"
+    legend.position = "right",
+    text = element_text(family = "Times New Roman"),
+    legend.title    = element_text(size = 14),    
+    legend.text     = element_text(size = 12),    
+    legend.key.size = unit(1, "cm"),                  
+    legend.spacing.y = unit(0.4, "cm")            
   ) +
-  coord_cartesian(clip = "off")
+  coord_cartesian(clip = "off") +
+  labs(tag = "A)") +
+  theme(plot.tag = element_text(face = "bold", size = 16))
 
 # Show the plot
 bubble_plot_species
+
 # Save plot
-ggsave(here("Figures", "bubble_plot_species.png"), width = 16, height = 9, units = "in")
+ggsave(here("Figures", "bubble_plot_species.png"), width = 12, height = 9, units = "in")
 
 ## Recode country names to match rnaturalearth conventions
 mydata <- mydata %>%
@@ -324,33 +365,28 @@ world_map <- ggplot(world_data) +
     low = "#deebf7",
     high = "#08306b",
     na.value = "grey90",
-    name = "Number of\nComparisons"   
+    name = "Number of\nComparisons"
   ) +
-  labs(
-    title = "B",
-    caption = "Grey areas = no studies"
-  ) +
-  theme_minimal() +
+  labs(caption = "Grey areas = no studies", tag = "B)") +
+  theme_minimal(base_size = 14) +
   theme(
     legend.position = "bottom",
     legend.title.align = 0,
-    legend.title = element_text(face = "bold", margin = margin(r = 10)),
-    plot.title = element_text(face = "bold"),
-    plot.subtitle = element_text(face = "italic"),
-    panel.grid = element_blank()           
+    panel.grid = element_blank(),
+    text          = element_text(family = "Times New Roman", size = 14),
+    axis.text     = element_text(size = 14),   
+    legend.text   = element_text(size = 12),   
+    legend.title  = element_text(face = "bold", margin = margin(r = 10), size = 12),
+    plot.caption  = element_text(size = 12),   
+    plot.subtitle = element_text(face = "italic", size = 14),
+    plot.tag      = element_text(face = "bold", size = 14)
   )
 
-## Display the plot:
+# Display map
 world_map
+
 # Save map
 ggsave(here("Figures","world_map.png"), width = 10, height = 5, units = "in")
-
-# # Combine side by side with one shared legend = NOT YET (also it should be vertical not horizontal)
-# species_and_map_combined <- bubble_plot_species + world_map +
-#   plot_annotation(tag_levels = 'A') &          # & applies theme to all plots
-#   theme(plot.tag = element_text(face = "bold", size = 14))
-# species_and_map_combined
-
 
 ### Summarise number and percentage of unique studies per publication year
 # table(mydata$study_ID, mydata$publication_year)
@@ -422,8 +458,8 @@ journal_year <- ggplot(
     axis.line = element_line(color = "black"),
     axis.ticks = element_line(color = "black", size = 0.3),
     axis.ticks.length = unit(0.2, "cm"),
-    panel.background = element_blank()
-  )
+    text = element_text(family = "Times New Roman")
+  ) 
 
 journal_year  # Print plot
 ggsave(here("Figures","journal_year.png"), width = 13, height = 11, units = "in")   
@@ -614,35 +650,31 @@ geom_sankey_richlabel <- function(mapping = NULL, data = NULL, position = "ident
 }
 
 # Create plot
-# Create plot
 sankey_plot <- ggplot(
   sankey_long,
-  aes(
-    x = x,
-    next_x = next_x,
-    node = node,
-    next_node = next_node,
-    fill = factor(node),
-    label = node_label
-  )
+  aes(x = x, next_x = next_x, node = node, next_node = next_node,
+      fill = factor(node), label = node_label)
 ) +
   geom_sankey(flow.alpha = 0.8, node.color = "transparent") +
-geom_sankey_richlabel(
-  size = 5,
-  colour = "black", 
-  fill = "white",   
-  alpha = 1,
-  label.color = NA,
-  label.padding = grid::unit(rep(2, 4), "pt")
+  geom_sankey_richlabel(
+    size = 6,
+    family = "Times New Roman",
+    colour = "black",
+    fill = "white",
+    alpha = 1,
+    label.color = NA,
+    label.padding = grid::unit(rep(2, 4), "pt")
   ) +
-  theme_sankey(base_size = 10) +
+  theme_sankey(base_size = 14, base_family = "Times New Roman") +
   labs(x = NULL) +
   theme(
-  legend.position = "none",
-  plot.title = element_text(hjust = 0.5),
-  axis.text.x.top = ggtext::element_markdown(
-    colour = "black",
-    size = 13
+    legend.position = "none",
+    text = element_text(family = "Times New Roman"),
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x.top = ggtext::element_markdown(
+      family = "Times New Roman",
+      colour = "black",
+      size = 16
     )
   ) +
   scale_x_discrete(
@@ -662,7 +694,7 @@ geom_sankey_richlabel(
 sankey_plot
                    
 # Save plot
-ggsave(here("Figures","Sankey_plot.png"), width = 20, height = 10, units = "in")
+ggsave(here("Figures","Sankey_plot.png"), width = 18, height = 8, units = "in")
 
 ## Check and fix proportional_data column based on units:
 ## In mydata$units raplace "au" with "arbitrary unts":
